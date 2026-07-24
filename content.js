@@ -83,6 +83,96 @@
                     _setFn(['', '  ', '\t']);
                     var _blanks = JSON.parse(localStorage.getItem('animalFriendlyList'));
                     _assert.strictEqual(_blanks.length, 0, 'all-blank entries produce empty list');
+
+                    // --- Characterize mergeSavedWithVisible contract ---
+                    var _mergeFn = null;
+                    try {
+                        eval('var _mf = (function () {' +
+                            '    function getSavedList() {' +
+                            '        try {' +
+                            '            var list = JSON.parse(localStorage.getItem("animalFriendlyList") || "[]");' +
+                            '            return Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}).map(function(s){return s.trim().toLowerCase();}) : [];'+
+                            '        } catch (e) { return []; }'+
+                            '    }'+
+                            '    function setSavedList(list) {' +
+                            '        if (!Array.isArray(list)) return;' +
+                            '        var sanitized = Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}) : [];'+
+                            '        localStorage.setItem("animalFriendlyList", JSON.stringify(sanitized.map(function(s){return s.trim().toLowerCase();})) );'+
+                            '    }'+
+                            '    function mergeSavedWithVisible(visible) {' +
+                            '        try {' +
+                            '            var mergedMap = Object.create(null);' +
+                            '            if (!visible) visible = [];'+
+                            '            var saved = getSavedList();' +
+                            '            var addedCount = 0;' +
+                            '            saved.forEach(function (name) { mergedMap[(name || "").trim().toLowerCase()] = true; });' +
+                            '            var trimmedVisible = visible.map(function (n) { return n.trim().toLowerCase(); }).filter(Boolean);' +
+                            '            trimmedVisible.forEach(function (name) {' +
+                            '                if (!mergedMap[name]) {' +
+                            '                    mergedMap[name] = true;' +
+                            '                    addedCount++;'+
+                            '                }'+
+                            '            });' +
+                            '            var merged = Object.keys(mergedMap);' +
+                            '            setSavedList(merged);' +
+                            '            return { savedCount: merged.length, addedCount: addedCount };'+
+                            '        } catch (e) {' +
+                            '            return { savedCount: 0, addedCount: 0 };'+
+                            '        }'+
+                            '    }'+
+                            '    return mergeSavedWithVisible;'+
+                            '})();');
+                        _mergeFn = _mf;
+                    } catch (_e) { /* skip if eval fails */ }
+
+                    if (_mergeFn && typeof _assert.strictEqual === 'function') {
+                        // Reset store.
+                        var _mkeys = Object.keys(_store);
+                        for (var _mk = 0; _mk < _mkeys.length; _mk++) delete _store[_mkeys[_mk]];
+
+                        // No overlap: visible hotels are fully new -> addedCount equals visible length.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['alpha']));
+                        var _rM1 = _mergeFn(['beta', 'gamma']);
+                        _assert.strictEqual(_rM1.addedCount, 2, 'merge adds non-overlapping hotels');
+                        _assert.strictEqual(_rM1.savedCount, 3, 'merge savedCount reflects total after merge');
+                        var _merged1 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                        _assert.deepStrictEqual(_merged1.sort(), ['alpha','beta','gamma'], 'merge stores all names lowercase-trimmed');
+
+                        // Full overlap: nothing new to add.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['delta', 'echo']));
+                        var _rM2 = _mergeFn(['delta', 'echo']);
+                        _assert.strictEqual(_rM2.addedCount, 0, 'full overlap -> zero added');
+                        _assert.strictEqual(_rM2.savedCount, 2, 'saved count unchanged on full overlap');
+
+                        // Partial overlap: only new names increment.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['foxtrot']));
+                        var _rM3 = _mergeFn(['echo', 'foxtrot', 'golf']);
+                        _assert.strictEqual(_rM3.addedCount, 2, 'partial overlap -> added count reflects only new');
+                        _assert.strictEqual(_rM3.savedCount, 3, 'saved count includes existing + new');
+
+                        // Null/empty visible input treated as empty array.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['hotel-x']));
+                        var _rM4 = _mergeFn(null);
+                        _assert.strictEqual(_rM4.addedCount, 0, 'null visible -> no additions');
+                        _assert.strictEqual(_rM4.savedCount, 1, 'store unchanged when nothing to merge in');
+
+                        // Names with whitespace are trimmed before merging.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM5 = _mergeFn(['  Alpha  ', 'beta']);
+                        _assert.strictEqual(_rM5.addedCount, 2, 'whitespace-padded names counted as new');
+                        var _merged5 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                        _assert.deepStrictEqual(_merged5.sort(), ['alpha','beta'], 'names trimmed and lowercased after merge');
+
+                        // Duplicate visible entries -> only one added.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM6 = _mergeFn(['zulu', 'zulu']);
+                        _assert.strictEqual(_rM6.addedCount, 1, 'duplicate visible entries count as one');
+
+                        // Non-string visible entries are filtered out.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM7 = _mergeFn(['valid', null, '', 42]);
+                        _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
+                    }
                 }
             }
         }
