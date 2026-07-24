@@ -271,6 +271,20 @@
                     var newHotels = getNonExcludedVisibleHotels(getVisibleHotelNames()).length;
                     if (newHotels > 0) text += ' (+ ' + newHotels + ' new)';
                     status.textContent = text;
+                    var badgeEl = document.getElementById('bf-count-badge');
+                    if (!badgeEl && count > 0) {
+                        badgeEl = document.createElement('span');
+                        badgeEl.id = 'bf-count-badge';
+                        badgeEl.style.cssText = 'display:inline-block;margin-left:6px;padding:2px 8px;background:#1f67ff;color:#fff;border-radius:999px;font-size:11px;font-weight:700;';
+                        status.appendChild(badgeEl);
+                    }
+                    if (badgeEl) {
+                        badgeEl.textContent = 'Saved ' + count;
+                        badgeEl.style.display = 'inline-block';
+                    } else if (count === 0) {
+                        var oldBadge = document.getElementById('bf-count-badge');
+                        if (oldBadge && oldBadge.parentNode) oldBadge.parentNode.removeChild(oldBadge);
+                    }
                     if (dimmed) {
                         status.style.color = '#ff4d4f';
                         status.style.borderColor = '#ff4d4f';
