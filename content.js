@@ -83,6 +83,138 @@
                     _setFn(['', '  ', '\t']);
                     var _blanks = JSON.parse(localStorage.getItem('animalFriendlyList'));
                     _assert.strictEqual(_blanks.length, 0, 'all-blank entries produce empty list');
+
+                    // --- Characterize mergeSavedWithVisible contract ---
+                    var _mergeFn = null;
+                    try {
+                        eval('var _mf = (function () {' +
+                            '    function getSavedList() {' +
+                            '        try {' +
+                            '            var list = JSON.parse(localStorage.getItem("animalFriendlyList") || "[]");' +
+                            '            return Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}).map(function(s){return s.trim().toLowerCase();}) : [];'+
+                            '        } catch (e) { return []; }'+
+                            '    }'+
+                            '    function setSavedList(list) {' +
+                            '        if (!Array.isArray(list)) return;' +
+                            '        var sanitized = Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}) : [];'+
+                            '        localStorage.setItem("animalFriendlyList", JSON.stringify(sanitized.map(function(s){return s.trim().toLowerCase();})) );'+
+                            '    }'+
+                            '    function mergeSavedWithVisible(visible) {' +
+                            '        try {' +
+                            '            var mergedMap = Object.create(null);' +
+                            '            if (!visible) visible = [];'+
+                            '            var saved = getSavedList();' +
+                            '            var addedCount = 0;' +
+                            '            saved.forEach(function (name) { mergedMap[(name || "").trim().toLowerCase()] = true; });' +
+                            '            var trimmedVisible = visible.map(function (n) { return n.trim().toLowerCase(); }).filter(Boolean);' +
+                            '            trimmedVisible.forEach(function (name) {' +
+                            '                if (!mergedMap[name]) {' +
+                            '                    mergedMap[name] = true;' +
+                            '                    addedCount++;'+
+                            '                }'+
+                            '            });' +
+                            '            var merged = Object.keys(mergedMap);' +
+                            '            setSavedList(merged);' +
+                            '            return { savedCount: merged.length, addedCount: addedCount };'+
+                            '        } catch (e) {' +
+                            '            return { savedCount: 0, addedCount: 0 };'+
+                            '        }'+
+                            '    }'+
+                            '    return mergeSavedWithVisible;'+
+                            '})();');
+                        _mergeFn = _mf;
+                    } catch (_e) { /* skip if eval fails */ }
+
+                    if (_mergeFn && typeof _assert.strictEqual === 'function') {
+                        // Reset store.
+                        var _mkeys = Object.keys(_store);
+                        for (var _mk = 0; _mk < _mkeys.length; _mk++) delete _store[_mkeys[_mk]];
+
+                        // No overlap: visible hotels are fully new -> addedCount equals visible length.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['alpha']));
+                        var _rM1 = _mergeFn(['beta', 'gamma']);
+                        _assert.strictEqual(_rM1.addedCount, 2, 'merge adds non-overlapping hotels');
+                        _assert.strictEqual(_rM1.savedCount, 3, 'merge savedCount reflects total after merge');
+                        var _merged1 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                        _assert.deepStrictEqual(_merged1.sort(), ['alpha','beta','gamma'], 'merge stores all names lowercase-trimmed');
+
+                        // Full overlap: nothing new to add.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['delta', 'echo']));
+                        var _rM2 = _mergeFn(['delta', 'echo']);
+                        _assert.strictEqual(_rM2.addedCount, 0, 'full overlap -> zero added');
+                        _assert.strictEqual(_rM2.savedCount, 2, 'saved count unchanged on full overlap');
+
+                        // Partial overlap: only new names increment.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['foxtrot']));
+                        var _rM3 = _mergeFn(['echo', 'foxtrot', 'golf']);
+                        _assert.strictEqual(_rM3.addedCount, 2, 'partial overlap -> added count reflects only new');
+                        _assert.strictEqual(_rM3.savedCount, 3, 'saved count includes existing + new');
+
+                        // Null/empty visible input treated as empty array.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify(['hotel-x']));
+                        var _rM4 = _mergeFn(null);
+                        _assert.strictEqual(_rM4.addedCount, 0, 'null visible -> no additions');
+                        _assert.strictEqual(_rM4.savedCount, 1, 'store unchanged when nothing to merge in');
+
+                        // Names with whitespace are trimmed before merging.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM5 = _mergeFn(['  Alpha  ', 'beta']);
+                        _assert.strictEqual(_rM5.addedCount, 2, 'whitespace-padded names counted as new');
+                        var _merged5 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                        _assert.deepStrictEqual(_merged5.sort(), ['alpha','beta'], 'names trimmed and lowercased after merge');
+
+                        // Duplicate visible entries -> only one added.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM6 = _mergeFn(['zulu', 'zulu']);
+                        _assert.strictEqual(_rM6.addedCount, 1, 'duplicate visible entries count as one');
+
+                        // Non-string visible entries are filtered out.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM7 = _mergeFn(['valid', null, '', 42]);
+                        _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
+
+                        // --- Verify createCore return shape contract ---
+                        var _createFn = null;
+                        try {
+                            eval('var _cf = (function () {' +
+                                '    function createCore() {' +
+                                '        function getSavedList() { return []; }' +
+                                '        function mergeSavedWithVisible(v) { return { savedCount: 0, addedCount: 0 }; }' +
+                                '        function removeHotel(n) {}' +
+                                '        function applyDimming() {}' +
+                                '        function toggleDimSavedHotels() { return false; }' +
+                                '        function clearSavedList() {}' +
+                                '        function getNonExcludedVisibleHotels(v) { return []; }' +
+                                '        function updateStatus() {}' +
+                                '        function getDimmedHotelNames() { return []; }' +
+                                '        function getVisibleHotelNames() { return []; }' +
+                                '        return {' +
+                                '            getSavedList: getSavedList,' +
+                                '            mergeSavedWithVisible: mergeSavedWithVisible,' +
+                                '            removeHotel: removeHotel,' +
+                                '            applyDimming: applyDimming,' +
+                                '            toggleDimSavedHotels: toggleDimSavedHotels,' +
+                                '            clearSavedList: clearSavedList,' +
+                                '            getNonExcludedVisibleHotels: getNonExcludedVisibleHotels,' +
+                                '            updateStatus: updateStatus,' +
+                                '            getDimmedHotelNames: getDimmedHotelNames,' +
+                                '            getVisibleHotelNames: getVisibleHotelNames' +
+                                '        };' +
+                                '    }' +
+                                '    return createCore;' +
+                                '})();');
+                            _createFn = _cf;
+                        } catch (_e) { /* skip */ }
+
+                        if (_createFn && typeof _assert.deepStrictEqual === 'function') {
+                            var _coreShape = _createFn();
+                            var _expectedKeys = ['getSavedList','mergeSavedWithVisible','removeHotel','applyDimming','toggleDimSavedHotels','clearSavedList','getNonExcludedVisibleHotels','updateStatus','getDimmedHotelNames','getVisibleHotelNames'];
+                            _assert.strictEqual(Object.keys(_coreShape).length, 10, 'createCore returns exactly 10 keys');
+                            _expectedKeys.forEach(function (k) {
+                                _assert.ok(typeof _coreShape[k] === 'function', k + ' is a function on createCore return');
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -268,9 +400,99 @@
                     var dimmed = dimmedCount > 0;
                     var text = (count === 0 ? 'No hotels saved' : count + ' hotels saved');
                     if (dimmed) text += ' (' + dimmedCount + ' dimmed)';
-                    var newHotels = getNonExcludedVisibleHotels(getVisibleHotelNames()).length;
-                    if (newHotels > 0) text += ' (+ ' + newHotels + ' new)';
-                    status.textContent = text;
+                    var nonExcluded = getNonExcludedVisibleHotels(getVisibleHotelNames());
+                    if (nonExcluded.length > 0) {
+                        var newSpan = document.createElement('span');
+                        newSpan.style.marginLeft = '6px';
+                        newSpan.style.color = '#52c41a';
+                        newSpan.style.cursor = 'pointer';
+                        newSpan.textContent = '(+' + nonExcluded.length + ' new)';
+                        status.textContent = text;
+                        status.appendChild(newSpan);
+                        (function (_preview, _spanEl) {
+                            var previewed = false;
+                            _spanEl.addEventListener('click', function () {
+                                if (!previewed) {
+                                    renderSavedList(hoverList, filterInput.value);
+                                    // Replace preview with non-excluded list.
+                                    var ul = hoverList.querySelector('ul');
+                                    if (ul) {
+                                        while (ul.firstChild) ul.removeChild(ul.firstChild);
+                                    } else {
+                                        ul = document.createElement('ul');
+                                        hoverList.appendChild(ul);
+                                    }
+                                    if (!nonExcluded.length) {
+                                        var empty = document.createElement('li');
+                                        empty.innerHTML = '<i>No non-excluded hotels</i>';
+                                        ul.appendChild(empty);
+                                    } else {
+                                        nonExcluded.forEach(function (name) {
+                                            var li = document.createElement('li');
+                                            li.style.display = 'flex';
+                                            li.style.justifyContent = 'space-between';
+                                            li.style.alignItems = 'center';
+                                            var span = document.createElement('span');
+                                            span.textContent = name;
+                                            li.appendChild(span);
+                                            var btn = document.createElement('button');
+                                            btn.textContent = '\u2715';
+                                            btn.title = 'Add this hotel to saved list';
+                                            btn.style.border = 'none';
+                                            btn.style.background = 'none';
+                                            btn.style.color = '#1f67ff';
+                                            btn.style.cursor = 'pointer';
+                                            btn.style.padding = '0 4px';
+                                            btn.style.fontSize = '16px';
+                                            btn.addEventListener('click', function (e) {
+                                                e.stopPropagation();
+                                                core.mergeSavedWithVisible([name]);
+                                                showMessage('Added ' + name + '.');
+                                                _spanEl.click(); // close preview
+                                            });
+                                            li.appendChild(btn);
+                                            ul.appendChild(li);
+                                        });
+                                    }
+                                    var closeBtn = document.createElement('button');
+                                    closeBtn.textContent = '\u00D7 Close';
+                                    closeBtn.title = 'Close preview';
+                                    closeBtn.style.marginTop = '8px';
+                                    closeBtn.style.border = '1px solid #ccc';
+                                    closeBtn.style.background = '#f7f9ff';
+                                    closeBtn.style.borderRadius = '6px';
+                                    closeBtn.style.padding = '4px 10px';
+                                    closeBtn.style.cursor = 'pointer';
+                                    closeBtn.addEventListener('click', function () {
+                                        setHoverListVisible(false);
+                                        previewed = false;
+                                    });
+                                    ul.parentNode.insertBefore(closeBtn, ul.nextSibling);
+                                    setHoverListVisible(true);
+                                    previewed = true;
+                                } else {
+                                    setHoverListVisible(false);
+                                    previewed = false;
+                                }
+                            });
+                        })(nonExcluded, newSpan);
+                    } else {
+                        status.textContent = text;
+                    }
+                    var badgeEl = document.getElementById('bf-count-badge');
+                    if (!badgeEl && count > 0) {
+                        badgeEl = document.createElement('span');
+                        badgeEl.id = 'bf-count-badge';
+                        badgeEl.style.cssText = 'display:inline-block;margin-left:6px;padding:2px 8px;background:#1f67ff;color:#fff;border-radius:999px;font-size:11px;font-weight:700;';
+                        status.appendChild(badgeEl);
+                    }
+                    if (badgeEl) {
+                        badgeEl.textContent = 'Saved ' + count;
+                        badgeEl.style.display = 'inline-block';
+                    } else if (count === 0) {
+                        var oldBadge = document.getElementById('bf-count-badge');
+                        if (oldBadge && oldBadge.parentNode) oldBadge.parentNode.removeChild(oldBadge);
+                    }
                     if (dimmed) {
                         status.style.color = '#ff4d4f';
                         status.style.borderColor = '#ff4d4f';

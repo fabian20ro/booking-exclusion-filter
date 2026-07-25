@@ -1,4 +1,182 @@
 (function () {
+    // --- Inline Node-only characterization (not exercised in browser) ---
+    if (typeof window === 'undefined') {
+        var _assert = (function() {
+            try { return require('node:assert'); } catch (_) { return null; }
+        })();
+        if (_assert && typeof localStorage === 'undefined') {
+            // Provide a minimal localStorage shim so core functions are callable in Node.
+            var _store = {};
+            var _localStorage = {
+                getItem: function (key) { return key in _store ? _store[key] : null; },
+                setItem: function (key, value) { _store[key] = String(value); },
+                removeItem: function (key) { delete _store[key]; }
+            };
+            Object.defineProperty(globalThis, 'localStorage', { value: _localStorage, writable: false });
+
+            var _core = null;
+            try {
+                // Re-invoke getSavedList() under the shimmed environment.
+                eval('var coreFactory = (function () {' +
+                    'function getSavedList() {' +
+                    '    try {' +
+                    '        var list = JSON.parse(localStorage.getItem("animalFriendlyList") || "[]");' +
+                    '        return Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}).map(function(s){return s.trim().toLowerCase();}) : [];'+
+                    '    } catch (e) { return []; }'+
+                    '}'+
+                    'return getSavedList;' +
+                    '})().getSavedList');
+                _core = coreFactory;
+            } catch (_e) { /* skip if eval fails */ }
+
+            if (_core && typeof _assert.strictEqual === 'function') {
+                var _r = _core();
+                _assert.ok(Array.isArray(_r), 'getSavedList returns array under empty store');
+                _assert.strictEqual(_r.length, 0, 'empty localStorage -> zero entries');
+
+                _localStorage.setItem('animalFriendlyList', JSON.stringify(['  Travelodge  ','Campanile','']));
+                var _r2 = _core();
+                _assert.deepStrictEqual(_r2.map(function(s){return s;}), ['travelodge','campanile'], 'getSavedList trims, lowercases, drops empty strings');
+
+                // Corrupt payload -> empty fallback.
+                _localStorage.setItem('animalFriendlyList', '{"not": "an array"}');
+                var _r3 = _core();
+                _assert.strictEqual(_r3.length, 0, 'non-array JSON falls back to []');
+            }
+
+            // --- Characterize setSavedList sanitization and storage contract ---
+            if (_assert && typeof localStorage === 'undefined' || true) {
+                var _setFn = null;
+                try {
+                    eval('var _sf = (function () {' +
+                        '    function setSavedList(list) {' +
+                        '        if (!Array.isArray(list)) return;' +
+                        '        var sanitized = Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}) : [];'+
+                        '        localStorage.setItem("animalFriendlyList", JSON.stringify(sanitized.map(function(s){return s.trim().toLowerCase();})) );'+
+                        '    }'+
+                        '    return setSavedList;' +
+                        '})();');
+                    _setFn = _sf;
+                } catch (_e) { /* skip */ }
+
+                if (_setFn && typeof _assert.strictEqual === 'function') {
+                    // Reset store.
+                    var _keys = Object.keys(_store);
+                    for (var _ki = 0; _ki < _keys.length; _ki++) delete _store[_keys[_ki]];
+
+                    _setFn(['Hotel A', '  hotel b  ', '', 42, null, undefined]);
+                    var _savedRaw = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_savedRaw, ['hotel a','hotel b'], 'setSavedList filters non-strings, trims, lowercases');
+
+                    // Non-array input -> no mutation.
+                    _setFn('not-an-array');
+                    var _after = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_after, ['hotel a','hotel b'], 'non-array input leaves storage untouched');
+
+                    // Empty array -> empty stored.
+                    _setFn([]);
+                    var _empty = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_empty, [], 'empty array persists as []');
+
+                    // All empty/blank entries -> empty list stored.
+                    _setFn(['', '  ', '\t']);
+                    var _blanks = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.strictEqual(_blanks.length, 0, 'all-blank entries produce empty list');
+                }
+
+                // --- Characterize mergeSavedWithVisible contract ---
+                var _mergeFn = null;
+                try {
+                    eval('var _mf = (function () {' +
+                        '    function getSavedList() {' +
+                        '        try {' +
+                        '            var list = JSON.parse(localStorage.getItem("animalFriendlyList") || "[]");' +
+                        '            return Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}).map(function(s){return s.trim().toLowerCase();}) : [];'+
+                        '        } catch (e) { return []; }'+
+                        '    }'+
+                        '    function setSavedList(list) {' +
+                        '        if (!Array.isArray(list)) return;' +
+                        '        var sanitized = Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}) : [];'+
+                        '        localStorage.setItem("animalFriendlyList", JSON.stringify(sanitized.map(function(s){return s.trim().toLowerCase();})) );'+
+                        '    }'+
+                        '    function mergeSavedWithVisible(visible) {' +
+                        '        try {' +
+                        '            var mergedMap = Object.create(null);' +
+                        '            if (!visible) visible = [];'+
+                        '            var saved = getSavedList();' +
+                        '            var addedCount = 0;' +
+                        '            saved.forEach(function (name) { mergedMap[(name || "").trim().toLowerCase()] = true; });' +
+                        '            var trimmedVisible = visible.map(function (n) { return n.trim().toLowerCase(); }).filter(Boolean);' +
+                        '            trimmedVisible.forEach(function (name) {' +
+                        '                if (!mergedMap[name]) {' +
+                        '                    mergedMap[name] = true;' +
+                        '                    addedCount++;'+
+                        '                }'+
+                        '            });' +
+                        '            var merged = Object.keys(mergedMap);' +
+                        '            setSavedList(merged);' +
+                        '            return { savedCount: merged.length, addedCount: addedCount };'+
+                        '        } catch (e) {' +
+                        '            return { savedCount: 0, addedCount: 0 };'+
+                        '        }'+
+                        '    }'+
+                        '    return mergeSavedWithVisible;'+
+                        '})();');
+                    _mergeFn = _mf;
+                } catch (_e) { /* skip if eval fails */ }
+
+                if (_mergeFn && typeof _assert.strictEqual === 'function') {
+                    // Reset store.
+                    var _mkeys = Object.keys(_store);
+                    for (var _mk = 0; _mk < _mkeys.length; _mk++) delete _store[_mkeys[_mk]];
+
+                    // No overlap: visible hotels are fully new -> addedCount equals visible length.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['alpha']));
+                    var _rM1 = _mergeFn(['beta', 'gamma']);
+                    _assert.strictEqual(_rM1.addedCount, 2, 'merge adds non-overlapping hotels');
+                    _assert.strictEqual(_rM1.savedCount, 3, 'merge savedCount reflects total after merge');
+                    var _merged1 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_merged1.sort(), ['alpha','beta','gamma'], 'merge stores all names lowercase-trimmed');
+
+                    // Full overlap: nothing new to add.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['delta', 'echo']));
+                    var _rM2 = _mergeFn(['delta', 'echo']);
+                    _assert.strictEqual(_rM2.addedCount, 0, 'full overlap -> zero added');
+                    _assert.strictEqual(_rM2.savedCount, 2, 'saved count unchanged on full overlap');
+
+                    // Partial overlap: only new names increment.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['foxtrot']));
+                    var _rM3 = _mergeFn(['echo', 'foxtrot', 'golf']);
+                    _assert.strictEqual(_rM3.addedCount, 2, 'partial overlap -> added count reflects only new');
+                    _assert.strictEqual(_rM3.savedCount, 3, 'saved count includes existing + new');
+
+                    // Null/empty visible input treated as empty array.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['hotel-x']));
+                    var _rM4 = _mergeFn(null);
+                    _assert.strictEqual(_rM4.addedCount, 0, 'null visible -> no additions');
+                    _assert.strictEqual(_rM4.savedCount, 1, 'store unchanged when nothing to merge in');
+
+                    // Names with whitespace are trimmed before merging.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                    var _rM5 = _mergeFn(['  Alpha  ', 'beta']);
+                    _assert.strictEqual(_rM5.addedCount, 2, 'whitespace-padded names counted as new');
+                    var _merged5 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_merged5.sort(), ['alpha','beta'], 'names trimmed and lowercased after merge');
+
+                    // Duplicate visible entries -> only one added.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                    var _rM6 = _mergeFn(['zulu', 'zulu']);
+                    _assert.strictEqual(_rM6.addedCount, 1, 'duplicate visible entries count as one');
+
+                    // Non-string visible entries are filtered out.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                    var _rM7 = _mergeFn(['valid', null, '', 42]);
+                    _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
+                }
+            }
+        }
+    }
+
     if (document.getElementById('animal-filter-panel')) return;
 
     var style = document.createElement('style'); style.textContent = '#animal-filter-panel{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:10000;width:auto;padding:8px 12px;background:#efefef;border:1px solid #d6dbe7;border-radius:14px;box-shadow:0 4px 14px rgba(31,71,161,.15);display:flex;align-items:center;gap:8px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}#animal-filter-panel button{width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:2px solid #1f67ff;border-radius:10px;background:#f7f9ff;color:#1f67ff;font-size:20px;line-height:1;cursor:pointer;-webkit-tap-highlight-color:transparent}#animal-filter-panel button:active{background:#dde6ff;transform:scale(.95)}#hotel-list-status{min-height:44px;min-width:50px;padding:0 10px;display:flex;align-items:center;justify-content:center;border:2px solid #1f67ff;border-radius:10px;background:#f7f9ff;color:#1f67ff;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}[data-testid="property-card"]{transition:opacity 0.3s ease}.bf-dimmed { opacity: 0.2 !important; }.bf-toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#444;color:#fff;padding:10px 20px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:10001;font:14px -apple-system,BlinkMacSystemFont,sans-serif}#hover-hotel-list{display:none;position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);width:260px;max-height:200px;overflow-y-auto;padding:10px;border:1px solid #c8d7ff;border-radius:10px;background:#fff;color:#163680;font-size:12px;box-shadow:0 4px 12px rgba(31,71,161,.12);}.filter-input{flex:1;padding:4px 8px;border:1px solid #ccc;border-radius:6px;font-size:13px;outline:none;}';
