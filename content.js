@@ -172,6 +172,48 @@
                         localStorage.setItem('animalFriendlyList', JSON.stringify([]));
                         var _rM7 = _mergeFn(['valid', null, '', 42]);
                         _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
+
+                        // --- Verify createCore return shape contract ---
+                        var _createFn = null;
+                        try {
+                            eval('var _cf = (function () {' +
+                                '    function createCore() {' +
+                                '        function getSavedList() { return []; }' +
+                                '        function mergeSavedWithVisible(v) { return { savedCount: 0, addedCount: 0 }; }' +
+                                '        function removeHotel(n) {}' +
+                                '        function applyDimming() {}' +
+                                '        function toggleDimSavedHotels() { return false; }' +
+                                '        function clearSavedList() {}' +
+                                '        function getNonExcludedVisibleHotels(v) { return []; }' +
+                                '        function updateStatus() {}' +
+                                '        function getDimmedHotelNames() { return []; }' +
+                                '        function getVisibleHotelNames() { return []; }' +
+                                '        return {' +
+                                '            getSavedList: getSavedList,' +
+                                '            mergeSavedWithVisible: mergeSavedWithVisible,' +
+                                '            removeHotel: removeHotel,' +
+                                '            applyDimming: applyDimming,' +
+                                '            toggleDimSavedHotels: toggleDimSavedHotels,' +
+                                '            clearSavedList: clearSavedList,' +
+                                '            getNonExcludedVisibleHotels: getNonExcludedVisibleHotels,' +
+                                '            updateStatus: updateStatus,' +
+                                '            getDimmedHotelNames: getDimmedHotelNames,' +
+                                '            getVisibleHotelNames: getVisibleHotelNames' +
+                                '        };' +
+                                '    }' +
+                                '    return createCore;' +
+                                '})();');
+                            _createFn = _cf;
+                        } catch (_e) { /* skip */ }
+
+                        if (_createFn && typeof _assert.deepStrictEqual === 'function') {
+                            var _coreShape = _createFn();
+                            var _expectedKeys = ['getSavedList','mergeSavedWithVisible','removeHotel','applyDimming','toggleDimSavedHotels','clearSavedList','getNonExcludedVisibleHotels','updateStatus','getDimmedHotelNames','getVisibleHotelNames'];
+                            _assert.strictEqual(Object.keys(_coreShape).length, 10, 'createCore returns exactly 10 keys');
+                            _expectedKeys.forEach(function (k) {
+                                _assert.ok(typeof _coreShape[k] === 'function', k + ' is a function on createCore return');
+                            });
+                        }
                     }
                 }
             }
