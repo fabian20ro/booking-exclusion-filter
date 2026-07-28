@@ -172,6 +172,14 @@
                     localStorage.setItem('animalFriendlyList', JSON.stringify([]));
                     var _rM7 = _mergeFn(['valid', null, '', 42]);
                     _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
+
+                    // Saved list with non-string JSON entries (numbers, nulls) -> getSavedList filters them; merge still works.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['Bravo', 42, null, true]));
+                    var _rM8 = _mergeFn(['charlie']);
+                    _assert.strictEqual(_rM8.addedCount, 1, 'numeric/null/bool saved entries ignored; only strings kept');
+                    _assert.strictEqual(_rM8.savedCount, 2, 'merged result contains only valid string entries + new');
+                    var _merged8 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_merged8.sort(), ['bravo','charlie'], 'non-string saved entries excluded from final list');
                 }
             }
         }
