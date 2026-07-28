@@ -172,6 +172,14 @@
                     localStorage.setItem('animalFriendlyList', JSON.stringify([]));
                     var _rM7 = _mergeFn(['valid', null, '', 42]);
                     _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
+
+                    // Saved list with non-string JSON entries (numbers, nulls) -> getSavedList filters them; merge still works.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['Bravo', 42, null, true]));
+                    var _rM8 = _mergeFn(['charlie']);
+                    _assert.strictEqual(_rM8.addedCount, 1, 'numeric/null/bool saved entries ignored; only strings kept');
+                    _assert.strictEqual(_rM8.savedCount, 2, 'merged result contains only valid string entries + new');
+                    var _merged8 = JSON.parse(localStorage.getItem('animalFriendlyList'));
+                    _assert.deepStrictEqual(_merged8.sort(), ['bravo','charlie'], 'non-string saved entries excluded from final list');
                 }
             }
         }
@@ -399,11 +407,71 @@
                     var dimmedNames = getDimmedHotelNames();
                     var dimmedCount = dimmedNames.length;
                     var dimmed = dimmedCount > 0;
-                    var newHotels = getNonExcludedVisibleHotels(getVisibleHotelNames()).length;
+                    var nonExcluded = getNonExcludedVisibleHotels(getVisibleHotelNames());
                     var text = (count === 0 ? 'No hotels saved' : count + ' hotels saved');
                     if (dimmed) text += ' (' + dimmedCount + ' dimmed)';
-                    if (newHotels > 0) text += ' (+ ' + newHotels + ' new)';
                     status.textContent = text;
+                    if (nonExcluded.length > 0) {
+                        var newSpan = document.createElement('span');
+                        newSpan.style.marginLeft = '6px';
+                        newSpan.style.color = '#52c41a';
+                        newSpan.style.cursor = 'pointer';
+                        newSpan.textContent = '(+' + nonExcluded.length + ' new)';
+                        status.appendChild(newSpan);
+                        (function (_preview, _spanEl) {
+                            var previewed = false;
+                            _spanEl.addEventListener('click', function () {
+                                if (!previewed) {
+                                    setHoverListVisible(true);
+                                    renderSavedList(hoverList, filterInput.value);
+                                    var ul = hoverList.querySelector('ul');
+                                    if (ul) { while (ul.firstChild) ul.removeChild(ul.firstChild); } else { ul = document.createElement('ul'); hoverList.appendChild(ul); }
+                                    nonExcluded.forEach(function (name) {
+                                        var li = document.createElement('li');
+                                        li.style.display = 'flex';
+                                        li.style.justifyContent = 'space-between';
+                                        li.style.alignItems = 'center';
+                                        var span = document.createElement('span');
+                                        span.textContent = name;
+                                        li.appendChild(span);
+                                        var btn = document.createElement('button');
+                                        btn.textContent = '\u2715';
+                                        btn.title = 'Add this hotel to saved list';
+                                        btn.style.border = 'none';
+                                        btn.style.background = 'none';
+                                        btn.style.color = '#1f67ff';
+                                        btn.style.cursor = 'pointer';
+                                        btn.style.padding = '0 4px';
+                                        btn.addEventListener('click', function (e) {
+                                            e.stopPropagation();
+                                            core.mergeSavedWithVisible([name]);
+                                            showMessage('Added ' + name + '.');
+                                            _spanEl.click();
+                                        });
+                                        btn.addEventListener('mouseenter', function() { btn.style.opacity = '0.7'; });
+                                        btn.addEventListener('mouseleave', function() { btn.style.opacity = '1.0'; });
+                                        li.appendChild(btn);
+                                        ul.appendChild(li);
+                                    });
+                                    var closeBtn = document.createElement('button');
+                                    closeBtn.textContent = '\u00D7 Close';
+                                    closeBtn.title = 'Close preview';
+                                    closeBtn.style.marginTop = '8px';
+                                    closeBtn.style.border = '1px solid #ccc';
+                                    closeBtn.style.background = '#f7f9ff';
+                                    closeBtn.style.borderRadius = '6px';
+                                    closeBtn.style.padding = '4px 10px';
+                                    closeBtn.style.cursor = 'pointer';
+                                    closeBtn.addEventListener('click', function () { setHoverListVisible(false); previewed = false; });
+                                    ul.parentNode.insertBefore(closeBtn, ul.nextSibling);
+                                    previewed = true;
+                                } else {
+                                    setHoverListVisible(false);
+                                    previewed = false;
+                                }
+                            });
+                        })(nonExcluded, newSpan);
+                    }
                     var badgeEl = document.getElementById('bf-count-badge');
                     if (!badgeEl && count > 0) {
                         badgeEl = document.createElement('span');
