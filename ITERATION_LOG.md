@@ -176,3 +176,13 @@
 2026-05-11 | UX polish: show explicit no-op message when "Add visible hotels" finds no new names; kept content.js and bookmarklet.js in sync.
 2026-05-05 | Refactor: shared core pattern in content.js + bookmarklet.js; Firefox MV3 support via gecko settings in manifest; README install steps updated.
 2026-06-06: Performed parity audit between bookmarklet.js and content.js. Found 100% functional parity in core logic, selectors, and interaction handlers.
+
+---
+
+### [2026-08-04] Repository migration
+
+**Context:** Replace the GitHub repository disabled by stale transport state and rename the project.
+**What happened:** Published the verified historical refs under `booking-exclusion-filter`, updated the README title and GitHub Pages URL, and intentionally retained the Firefox extension ID and `animalFriendlyList` storage key for compatibility. JavaScript syntax checks passed; the untouched source SHA and migration tree both retain the pre-existing `core_logic.test.js` case-normalization failure (`Hotel B` expected, `hotel b` actual).
+**Outcome:** Success
+**Insight:** Repository and Pages URLs must move together; stable extension and storage identifiers should not change during a repository-only migration.
+**Promoted to Lessons Learned:** No
