@@ -186,6 +186,12 @@
                     var _rM9 = _mergeFn(['  Alpha Hotel  ']);
                     _assert.strictEqual(_rM9.addedCount, 0, 'bidirectional normalization: padded mixed-case visible matches normalized saved');
                     _assert.strictEqual(_rM9.savedCount, 1, 'store unchanged when visible deduped against saved');
+
+                    // Non-array truthy input (string) -> caught by try/catch in eval'd copy -> zero additions; captures divergence from production which silently substitutes getVisibleHotelNames().
+                    localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                    var _rM10 = _mergeFn('alpha');
+                    _assert.strictEqual(_rM10.addedCount, 0, 'string visible throws TypeError -> zero added (eval copy)');
+                    _assert.strictEqual(_rM10.savedCount, 0, 'store remains empty when non-array visible fails');
                 }
             }
         }
