@@ -323,7 +323,8 @@
         function toggleDimSavedHotels() {
             try {
                 var savedMap = Object.create(null);
-                getSavedList().forEach(function (name) { savedMap[name.toLowerCase()] = true; });
+                // Names are already lowercased by getSavedList() — do NOT re-lowercase.
+                getSavedList().forEach(function (name) { savedMap[name] = true; });
                 getPropertyCards().forEach(function (card) {
                     if (!card || typeof card.classList === 'undefined') return;
                     var name = getHotelNameFromCard(card).toLowerCase();
