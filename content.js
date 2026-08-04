@@ -735,6 +735,7 @@
                 btn.onclick = function() {
                     if (!confirm('Remove ' + name + ' from the list?')) return;
                     core.removeHotel(name);
+                    showMessage('Removed ' + name + '.');
                     renderSavedList(listEl, filter);
                 };
                 li.appendChild(btn);
