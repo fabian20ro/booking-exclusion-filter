@@ -180,6 +180,12 @@
                     _assert.strictEqual(_rM8.savedCount, 2, 'merged result contains only valid string entries + new');
                     var _merged8 = JSON.parse(localStorage.getItem('animalFriendlyList'));
                     _assert.deepStrictEqual(_merged8.sort(), ['bravo','charlie'], 'non-string saved entries excluded from final list');
+
+                    // Bidirectional normalization: saved has normalized form; visible comes padded+mixed-case -> dedup works across lists.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['alpha hotel']));
+                    var _rM9 = _mergeFn(['  Alpha Hotel  ']);
+                    _assert.strictEqual(_rM9.addedCount, 0, 'bidirectional normalization: padded mixed-case visible matches normalized saved');
+                    _assert.strictEqual(_rM9.savedCount, 1, 'store unchanged when visible deduped against saved');
                 }
             }
         }
