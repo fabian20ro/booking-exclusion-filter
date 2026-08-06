@@ -180,6 +180,18 @@
                     _assert.strictEqual(_rM8.savedCount, 2, 'merged result contains only valid string entries + new');
                     var _merged8 = JSON.parse(localStorage.getItem('animalFriendlyList'));
                     _assert.deepStrictEqual(_merged8.sort(), ['bravo','charlie'], 'non-string saved entries excluded from final list');
+
+                    // Bidirectional normalization: saved has normalized form; visible comes padded+mixed-case -> dedup works across lists.
+                    localStorage.setItem('animalFriendlyList', JSON.stringify(['alpha hotel']));
+                    var _rM9 = _mergeFn(['  Alpha Hotel  ']);
+                    _assert.strictEqual(_rM9.addedCount, 0, 'bidirectional normalization: padded mixed-case visible matches normalized saved');
+                    _assert.strictEqual(_rM9.savedCount, 1, 'store unchanged when visible deduped against saved');
+
+                    // Non-array truthy input (string) -> caught by try/catch in eval'd copy -> zero additions; captures divergence from production which silently substitutes getVisibleHotelNames().
+                    localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                    var _rM10 = _mergeFn('alpha');
+                    _assert.strictEqual(_rM10.addedCount, 0, 'string visible throws TypeError -> zero added (eval copy)');
+                    _assert.strictEqual(_rM10.savedCount, 0, 'store remains empty when non-array visible fails');
                 }
             }
         }
@@ -299,7 +311,7 @@
     function toggleDimSavedHotels() {
         try {
             var savedMap = Object.create(null);
-            getSavedList().forEach(function (name) { savedMap[name.toLowerCase()] = true; });
+            getSavedList().forEach(function (name) { savedMap[name] = true; }); // names already lowercased from getSavedList()
             getPropertyCards().forEach(function (card) {
                 if (!card || typeof card.classList === 'undefined') return;
                 var name = getHotelNameFromCard(card).toLowerCase();
