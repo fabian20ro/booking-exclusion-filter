@@ -173,6 +173,17 @@
                         var _rM7 = _mergeFn(['valid', null, '', 42]);
                         _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
 
+                        // Non-array visible input: production .map() on string throws -> catch returns zeros.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM8 = _mergeFn('not-an-array');
+                        _assert.strictEqual(_rM8.addedCount, 0, 'non-array visible input caught by try/catch');
+                        _assert.strictEqual(_rM8.savedCount, 0, 'store remains empty after failed merge');
+
+                        // Boolean false visible -> falsy check triggers [].map() guard fallback via catch.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM9 = _mergeFn(false);
+                        _assert.strictEqual(_rM9.addedCount, 0, 'boolean false visible yields no additions');
+
                         // --- Verify createCore return shape contract ---
                         var _createFn = null;
                         try {
