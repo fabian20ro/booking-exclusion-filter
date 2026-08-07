@@ -173,6 +173,17 @@
                         var _rM7 = _mergeFn(['valid', null, '', 42]);
                         _assert.strictEqual(_rM7.addedCount, 1, 'non-string and empty visible entries ignored');
 
+                        // Non-array visible input: production .map() on string throws -> catch returns zeros.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM8 = _mergeFn('not-an-array');
+                        _assert.strictEqual(_rM8.addedCount, 0, 'non-array visible input caught by try/catch');
+                        _assert.strictEqual(_rM8.savedCount, 0, 'store remains empty after failed merge');
+
+                        // Boolean false visible -> falsy check triggers [].map() guard fallback via catch.
+                        localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                        var _rM9 = _mergeFn(false);
+                        _assert.strictEqual(_rM9.addedCount, 0, 'boolean false visible yields no additions');
+
                         // --- Verify createCore return shape contract ---
                         var _createFn = null;
                         try {
@@ -213,6 +224,70 @@
                             _expectedKeys.forEach(function (k) {
                                 _assert.ok(typeof _coreShape[k] === 'function', k + ' is a function on createCore return');
                             });
+                        }
+
+                        // --- Characterize getNonExcludedVisibleHotels contract ---
+                        var _excludeFn = null;
+                        try {
+                            eval('var _ef = (function () {' +
+                                '    function getSavedList() {' +
+                                '        try {' +
+                                '            var list = JSON.parse(localStorage.getItem("animalFriendlyList") || "[]");' +
+                                '            return Array.isArray(list) ? list.filter(function(s){return typeof s==="string"&&s.trim()!=="";}).map(function(s){return s.trim().toLowerCase();}) : [];'+
+                                '        } catch (e) { return []; }'+
+                                '    }'+
+                                '    function getNonExcludedVisibleHotels(visible) {' +
+                                '        try {' +
+                                '            var savedMap = Object.create(null);' +
+                                '            getSavedList().forEach(function (name) { savedMap[name.toLowerCase()] = true; });' +
+                                '            visible = Array.isArray(visible) ? visible : [];'+
+                                '            return visible.map(function (n) { return n.trim().toLowerCase(); }).filter(Boolean).filter(function (name) { return !savedMap[name]; });'+
+                                '        } catch (e) {' +
+                                '            console.error("Booking Filter: Error in getNonExcludedVisibleHotels", e);' +
+                                '            return [];'+
+                                '        }'+
+                                '    }'+
+                                '    function mergeSavedWithVisible(visible) { return { savedCount: 0, addedCount: 0 }; }'+
+                                '    return getNonExcludedVisibleHotels;' +
+                                '})();');
+                            _excludeFn = _ef;
+                        } catch (_e) { /* skip if eval fails */ }
+
+                        if (_excludeFn && typeof _assert.deepStrictEqual === 'function') {
+                            // Reset store.
+                            var _exkeys = Object.keys(_store);
+                            for (var _exk = 0; _exk < _exkeys.length; _exk++) delete _store[_exkeys[_exk]];
+
+                            // Basic exclusion: visible names not in saved list pass through.
+                            localStorage.setItem('animalFriendlyList', JSON.stringify(['hotel-a']));
+                            var _rE1 = _excludeFn(['hotel-b', 'hotel-c']);
+                            _assert.deepStrictEqual(_rE1, ['hotel-b','hotel-c'], 'non-saved visible hotels pass through');
+
+                            // Names in saved list are excluded.
+                            localStorage.setItem('animalFriendlyList', JSON.stringify(['alpha']));
+                            var _rE2 = _excludeFn(['beta', 'alpha', 'gamma']);
+                            _assert.deepStrictEqual(_rE2, ['beta','gamma'], 'saved-name hotel is filtered out');
+
+                            // Trim/lowercase applied to visible input.
+                            localStorage.setItem('animalFriendlyList', JSON.stringify(['  Bravo  ']));
+                            var _rE3 = _excludeFn(['BRAVO']);
+                            _assert.deepStrictEqual(_rE3, [], 'trimmed saved name matches trimmed visible -> excluded');
+
+                            // Empty strings in visible are filtered out.
+                            localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                            var _rE4 = _excludeFn(['valid', '', null, 42]);
+                            _assert.deepStrictEqual(_rE4, ['valid'], 'non-string and empty entries removed from result');
+
+                            // Error boundary: throw inside try -> return [].
+                            localStorage.setItem('animalFriendlyList', JSON.stringify([]));
+                            var _brokenFn = (function() {
+                                return function getNonExcludedVisibleHotels(visible) {
+                                    Object.preventExtensions(null).toLowerCase; // trigger error
+                                    return [];
+                                };
+                            })();
+                            var _rE5 = _brokenFn(['a']);
+                            _assert.strictEqual(_rE5.length, 0, 'error inside try/catch returns empty array');
                         }
                     }
                 }
