@@ -440,7 +440,7 @@
         function getNonExcludedVisibleHotels(visible) {
             try {
                 var savedMap = Object.create(null);
-                getSavedList().forEach(function (name) { savedMap[name.toLowerCase()] = true; });
+                getSavedList().forEach(function (name) { savedMap[name] = true; }); // names are already lowercased by getSavedList() — do NOT re-lowercase
                 visible = Array.isArray(visible) ? visible : getVisibleHotelNames();
                 return visible.map(function (n) { return n.trim().toLowerCase(); }).filter(Boolean).filter(function (name) { return !savedMap[name]; });
             } catch (e) {
