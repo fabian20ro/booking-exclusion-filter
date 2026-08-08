@@ -261,9 +261,12 @@
     }
 
     function mergeSavedWithVisible(visible) {
+        if (!Array.isArray(visible)) {
+            console.warn('Booking Filter: mergeSavedWithVisible rejected — expected array, got ' + (typeof visible));
+            return { savedCount: 0, addedCount: 0 };
+        }
         try {
             var mergedMap = Object.create(null);
-            if (!Array.isArray(visible)) visible = getVisibleHotelNames();
             var saved = getSavedList();
             var addedCount = 0;
             saved.forEach(function (name) { mergedMap[(name || '').trim().toLowerCase()] = true; });
