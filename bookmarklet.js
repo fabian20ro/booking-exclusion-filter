@@ -262,8 +262,8 @@
 
     function mergeSavedWithVisible(visible) {
         if (!Array.isArray(visible)) {
-            console.warn('Booking Filter: mergeSavedWithVisible rejected — expected array, got ' + (typeof visible));
-            return { savedCount: 0, addedCount: 0 };
+            // Fall back to DOM discovery when called without arguments (e.g. "Add visible hotels" button).
+            visible = getVisibleHotelNames();
         }
         try {
             var mergedMap = Object.create(null);
