@@ -261,9 +261,12 @@
     }
 
     function mergeSavedWithVisible(visible) {
+        if (!Array.isArray(visible)) {
+            // Fall back to DOM discovery when called without arguments (e.g. "Add visible hotels" button).
+            visible = getVisibleHotelNames();
+        }
         try {
             var mergedMap = Object.create(null);
-            if (!Array.isArray(visible)) visible = getVisibleHotelNames();
             var saved = getSavedList();
             var addedCount = 0;
             saved.forEach(function (name) { mergedMap[(name || '').trim().toLowerCase()] = true; });
