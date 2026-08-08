@@ -263,7 +263,7 @@
     function mergeSavedWithVisible(visible) {
         try {
             var mergedMap = Object.create(null);
-            if (!visible) visible = getVisibleHotelNames();
+            if (!Array.isArray(visible)) visible = getVisibleHotelNames();
             var saved = getSavedList();
             var addedCount = 0;
             saved.forEach(function (name) { mergedMap[(name || '').trim().toLowerCase()] = true; });
