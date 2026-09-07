@@ -148,6 +148,23 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(list.style.display, 'none');
     });
 
+    test('saved-list filter input re-renders matching and no-match states', ({ core, document }) => {
+        core.mergeSavedWithVisible(['Alpha Hotel', 'Beta Inn']);
+        const list = document.getElementById('hover-hotel-list');
+        const input = list.querySelector('input');
+        input.value = 'alpha';
+        input.dispatch('input');
+        assert.ok(list.textContent.includes('alpha hotel'));
+        assert.doesNotMatch(list.textContent, /beta inn/);
+        input.value = 'nomatch';
+        input.dispatch('input');
+        assert.equal(list.textContent, 'No matches');
+        input.value = '';
+        input.dispatch('input');
+        assert.ok(list.textContent.includes('alpha hotel'));
+        assert.ok(list.textContent.includes('beta inn'));
+    });
+
     test('status preview shows only non-excluded visible hotels', ({ core, localStorage, card, document }) => {
         const status = document.getElementById('hotel-list-status');
         localStorage.setItem(key, '["alpha"]');
