@@ -148,6 +148,20 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(list.style.display, 'none');
     });
 
+    test('status preview shows only non-excluded visible hotels', ({ core, localStorage, card, document }) => {
+        const status = document.getElementById('hotel-list-status');
+        localStorage.setItem(key, '["alpha"]');
+        card('alpha');
+        core.applyDimming();
+        core.updateStatus();
+        assert.match(status.textContent, /1 hotels saved \(1 dimmed\)/);
+        assert.doesNotMatch(status.textContent, /\+\d+ new/);
+        card('Beta');
+        core.updateStatus();
+        assert.match(status.textContent, /\(\+1 new\)/);
+        assert.equal(document.getElementById('bf-count-badge').textContent, 'Saved 1');
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
