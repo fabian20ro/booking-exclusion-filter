@@ -56,6 +56,14 @@
 **Insight:** User-facing docs should mirror the exact action label, not a paraphrase.
 **Promoted to Lessons Learned:** No
 
+### [2026-09-07] Replace copy-based tests with production-source verification
+
+**Context:** Compound's test discovery could not pair copied core tests with real production behavior.
+**What happened:** Replaced copied helpers with complete-script VM execution, shared browser boundary fixtures, direct core/UI assertions and in-memory mutation controls. Removed dead Node-only eval-copy pseudo-tests from both shipping scripts. Added extension core exposure matching the bookmarklet; no new package or build layer. Real tests exposed and fixed an undefined extension toggle status call, bookmarklet discovery escaping its error boundary, and an ES2015 collection dependency violating the bookmarklet runtime constraint. GitHub validation now runs the Node behavioral suite before deploying.
+**Outcome:** 30 source-driven cases plus legacy-runtime smoke pass. Official Hermes container-local gate passes all three checks: both JavaScript syntax checks and `node --test tests/core_logic.test.js`. Source-normalizer mutation controls fail as expected before asserting the original behavior.
+**Insight:** Passing a copied implementation proves nothing about the shipping code; browser-event tests catch closure/scope errors that isolated helpers miss.
+**Promoted to Lessons Learned:** Yes
+
 ---
 ### [2026-05-14] README action label sync
 

@@ -23,6 +23,8 @@ jobs:
         run: |
           node --check content.js
           node --check bookmarklet.js
+      - name: Test both shipping scripts
+        run: node tests/core_logic.test.js
 
   deploy:
     if: github.event_name == 'push'
