@@ -73,6 +73,11 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.deepEqual(plain(core.getNonExcludedVisibleHotels([' ALPHA ', ' GAMMA '])), ['gamma']);
     });
 
+    test('whitespace-only visible entries are dropped from non-excluded results', ({ core }) => {
+        assert.deepEqual(plain(core.getNonExcludedVisibleHotels(['  '])), []);
+        assert.deepEqual(plain(core.getNonExcludedVisibleHotels(['  ', 'Omega '])), ['omega']);
+    });
+
     test('merge drives dimming; remove reverses it and refreshes status', ({ core, card, document }) => {
         const alpha = card(' ALPHA '), beta = card('beta');
         core.mergeSavedWithVisible(['alpha']);
