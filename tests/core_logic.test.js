@@ -162,6 +162,21 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(document.getElementById('bf-count-badge').textContent, 'Saved 1');
     });
 
+    test('status styling tracks dimmed, active and empty states', ({ core, card, document }) => {
+        const status = document.getElementById('hotel-list-status');
+        card('alpha');
+        core.mergeSavedWithVisible(['alpha']);
+        assert.equal(status.style.color, '#ff4d4f');
+        assert.equal(status.style.borderColor, '#ff4d4f');
+        core.toggleDimSavedHotels();
+        core.updateStatus();
+        assert.equal(status.style.color, '#1f67ff');
+        assert.equal(status.style.borderColor, '#1f67ff');
+        core.clearSavedList();
+        assert.equal(status.style.color, '');
+        assert.equal(status.style.borderColor, '');
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
