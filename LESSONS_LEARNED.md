@@ -55,6 +55,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 ## Code Patterns & Pitfalls
 
+**[2026-09-07] Test shipping code, not copied helpers** — `node tests/core_logic.test.js` executes both complete scripts using the dependency-free `tests/browser_fixture.js` VM harness. Assert through the real `window.__bookingFilter` core or mounted button callbacks; never paste production functions into tests or embed eval-based pseudo-tests in browser assets. Mutation controls must fail when the source normalizer is broken in memory. Bookmarklet tests also disable ES2015 collection APIs to protect the ES5 runtime contract.
+
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
 **[2026-05-11] Explicit no-op feedback** — For idempotent save actions, a success message like "Saved 0 items" reads like a bug; show a dedicated no-op message instead.
