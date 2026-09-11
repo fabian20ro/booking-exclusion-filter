@@ -39,6 +39,17 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.deepEqual(plain(core.getSavedList()), ['alpha hotel', 'β hotel']);
     });
 
+    test('merge survives storage write failure without persisting', ({ core, localStorage }) => {
+        localStorage.setItem(key, '["alpha"]');
+        const originalSet = localStorage.setItem;
+        localStorage.setItem = () => { throw Error('storage denied'); };
+        assert.doesNotThrow(() => {
+            assert.deepEqual(plain(core.mergeSavedWithVisible(['beta'])), { savedCount: 2, addedCount: 1 });
+        });
+        assert.equal(localStorage.getItem(key), '["alpha"]');
+        localStorage.setItem = originalSet;
+    });
+
     test('merge normalizes, deduplicates, persists and is idempotent', ({ core, localStorage }) => {
         localStorage.setItem(key, JSON.stringify([' Alpha HOTEL ', null]));
         assert.deepEqual(plain(core.mergeSavedWithVisible(['alpha hotel', ' Beta ', 'BETA', '  '])),
