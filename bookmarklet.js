@@ -196,7 +196,7 @@
         getVisibleHotelNames: getVisibleHotelNames
     };
 
-    function showMessage(message) {
+    function showMessage(message, ttl) {
         var old = document.getElementById('bf-toast');
         if (old && old.parentNode) old.parentNode.removeChild(old);
 
@@ -213,7 +213,7 @@
 
         setTimeout(function () {
             if (msgBox.parentNode) msgBox.parentNode.removeChild(msgBox);
-        }, 3000);
+        }, ttl || 3000);
     }
 
     function updateStatus() {
@@ -501,11 +501,12 @@
         }],
         ['Clear hotel filter list', '\uD83E\uDDF9', 'clear-animals-btn', function () {
             if (!confirm('Are you sure you want to clear the hotel filter list?')) return;
-            var hadSavedList = core.getSavedList().length > 0;
+            var clearedCount = core.getSavedList().length;
+            if (clearedCount === 0) return;
             core.clearSavedList();
             core.updateStatus();
             if (hoverList.style.display === 'block') renderSavedList(hoverList, filterInput.value);
-            showMessage(hadSavedList ? 'Hotel filter list cleared.' : 'Hotel filter list was already empty.');
+            showMessage('Cleared ' + clearedCount + (clearedCount === 1 ? ' hotel' : ' hotels'), 2000);
         }],
     ];
 

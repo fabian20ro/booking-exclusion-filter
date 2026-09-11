@@ -39,6 +39,17 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.deepEqual(plain(core.getSavedList()), ['alpha hotel', 'β hotel']);
     });
 
+    test('merge survives storage write failure without persisting', ({ core, localStorage }) => {
+        localStorage.setItem(key, '["alpha"]');
+        const originalSet = localStorage.setItem;
+        localStorage.setItem = () => { throw Error('storage denied'); };
+        assert.doesNotThrow(() => {
+            assert.deepEqual(plain(core.mergeSavedWithVisible(['beta'])), { savedCount: 2, addedCount: 1 });
+        });
+        assert.equal(localStorage.getItem(key), '["alpha"]');
+        localStorage.setItem = originalSet;
+    });
+
     test('merge normalizes, deduplicates, persists and is idempotent', ({ core, localStorage }) => {
         localStorage.setItem(key, JSON.stringify([' Alpha HOTEL ', null]));
         assert.deepEqual(plain(core.mergeSavedWithVisible(['alpha hotel', ' Beta ', 'BETA', '  '])),
@@ -113,6 +124,32 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         localStorage.setItem(key, '["kept"]'); delete localStorage.removeItem;
         assert.doesNotThrow(() => core.clearSavedList());
         assert.equal(localStorage.getItem(key), '["kept"]');
+    });
+
+    test('clear shows a toast with the removed count and removes it after the timeout', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            var __timers = [];
+            setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms }); return __timers.length; };
+        `);
+        b.localStorage.setItem(key, '["alpha","beta","gamma"]');
+        b.document.getElementById('clear-animals-btn').click();
+        const toast = b.document.getElementById('bf-toast');
+        assert.equal(toast.textContent, 'Cleared 3 hotels');
+        const timer = b.__timers.find(t => t.ms === 2000);
+        assert.ok(timer, filename + ': toast dismissal scheduled at 2000 ms');
+        timer.fn();
+        assert.equal(b.document.getElementById('bf-toast'), null);
+        assert.equal(b.document.body.children.some(c => c.className === 'bf-toast'), false);
+    });
+
+    test('clear on an empty list does not create a toast', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            var __timers = [];
+            setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms }); return __timers.length; };
+        `);
+        b.document.getElementById('clear-animals-btn').click();
+        assert.equal(b.document.getElementById('bf-toast'), null);
+        assert.equal(b.document.body.children.some(c => c.className === 'bf-toast'), false);
     });
 
     test('guarded operations tolerate unavailable DOM', ({ core, document }) => {
