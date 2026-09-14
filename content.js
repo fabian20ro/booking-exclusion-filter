@@ -179,8 +179,13 @@
                     var dimmedNames = getDimmedHotelNames();
                     var dimmedCount = dimmedNames.length;
                     var dimmed = dimmedCount > 0;
+                    var visibleCount = 0;
+                    getPropertyCards().forEach(function (card) {
+                        if (card && typeof card.classList !== 'undefined' && !card.classList.contains('bf-dimmed')) visibleCount++;
+                    });
                     var text = (count === 0 ? 'No hotels saved' : count + ' hotels saved');
                     if (dimmed) text += ' (' + dimmedCount + ' dimmed)';
+                    if (count > 0) text += ' (' + visibleCount + ' visible)';
                     var nonExcluded = getNonExcludedVisibleHotels(getVisibleHotelNames());
                     if (nonExcluded.length > 0) {
                         var newSpan = document.createElement('span');
