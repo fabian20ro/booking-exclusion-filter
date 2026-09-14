@@ -95,7 +95,7 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(alpha.classList.contains('bf-dimmed'), true);
         assert.equal(beta.classList.contains('bf-dimmed'), false);
         assert.deepEqual(plain(core.getDimmedHotelNames()), ['alpha']);
-        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotels saved.*1 dimmed/);
+        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotels saved.*1 dimmed.*1 visible/);
         for (const invalid of [null, 42, '', '   ', 'missing']) core.removeHotel(invalid);
         assert.deepEqual(plain(core.getSavedList()), ['alpha']);
         core.removeHotel('  ALPHA  ');
