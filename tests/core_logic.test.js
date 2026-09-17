@@ -163,6 +163,13 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.deepEqual(plain(core.mergeSavedWithVisible(['explicit'])), { savedCount: 1, addedCount: 1 });
     });
 
+    test('add-visible with everything already saved shows an all-present toast', ({ localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha hotel","beta inn"]');
+        card('alpha hotel'); card('beta inn');
+        document.getElementById('save-animals-btn').click();
+        assert.equal(document.getElementById('bf-toast').textContent, 'All 2 visible hotels already in list');
+    });
+
     test('save, toggle and clear buttons run production callbacks', ({ core, card, document, errors }) => {
         const alpha = card('Alpha');
         document.getElementById('save-animals-btn').click();
