@@ -170,6 +170,28 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(document.getElementById('bf-toast').textContent, 'All 2 visible hotels already in list');
     });
 
+    test('all-present toast counts unique visible names, not the saved list', ({ localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha","beta","gamma"]');
+        card(' Alpha '); card('alpha'); card('  ');
+        document.getElementById('save-animals-btn').click();
+        assert.equal(document.getElementById('bf-toast').textContent, 'All 1 visible hotels already in list');
+        assert.deepEqual(JSON.parse(localStorage.getItem(key)), ['alpha', 'beta', 'gamma']);
+    });
+
+    test('no visible hotels does not report saved hotels as visible', ({ localStorage, document }) => {
+        localStorage.setItem(key, '["alpha","beta","gamma"]');
+        document.getElementById('save-animals-btn').click();
+        assert.equal(document.getElementById('bf-toast').textContent, 'No new hotel names found.');
+    });
+
+    test('add-visible reports newly added names, not all visible or saved names', ({ localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha","gamma"]');
+        card('Alpha'); card('Beta'); card(' beta ');
+        document.getElementById('save-animals-btn').click();
+        assert.equal(document.getElementById('bf-toast').textContent, 'Saved 1 hotel names.');
+        assert.deepEqual(JSON.parse(localStorage.getItem(key)), ['alpha', 'gamma', 'beta']);
+    });
+
     test('save, toggle and clear buttons run production callbacks', ({ core, card, document, errors }) => {
         const alpha = card('Alpha');
         document.getElementById('save-animals-btn').click();
