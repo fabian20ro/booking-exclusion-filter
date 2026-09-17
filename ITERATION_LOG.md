@@ -56,6 +56,15 @@
 **Insight:** User-facing docs should mirror the exact action label, not a paraphrase.
 **Promoted to Lessons Learned:** No
 
+### [2026-09-17] Correct visible-count toast
+
+Saved-list size is not visible-result count. Reproduced three saved names / one
+visible name reporting three visible hotels; empty results also misreported.
+Both shipping callbacks now reuse one normalized visible snapshot for merging and
+messaging. Kept the core return contract and ES5 compatibility. Regression RED,
+then 52 production-source cases PASS, including duplicates, empty and newly added
+names; JavaScript syntax checks PASS. No dependencies added.
+
 ### [2026-09-07] Replace copy-based tests with production-source verification
 
 **Context:** Compound's test discovery could not pair copied core tests with real production behavior.

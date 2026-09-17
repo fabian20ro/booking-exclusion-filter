@@ -465,10 +465,11 @@
 
     var buttonsConfig = [
         ['Add visible hotels', '\u2795', 'save-animals-btn', function () {
-            var result = core.mergeSavedWithVisible();
+            var visible = core.getVisibleHotelNames();
+            var result = core.mergeSavedWithVisible(visible);
             core.updateStatus();
             if (hoverList.style.display === 'block') renderSavedList(hoverList, filterInput.value);
-            showMessage(result.addedCount ? ('Saved ' + result.addedCount + ' hotel names.') : (result.savedCount ? ('All ' + result.savedCount + ' visible hotels already in list') : 'No new hotel names found.'));
+            showMessage(result.addedCount ? ('Saved ' + result.addedCount + ' hotel names.') : (visible.length ? ('All ' + visible.length + ' visible hotels already in list') : 'No new hotel names found.'));
         }],
         ['Toggle dimming', '\uD83D\uDD0D', 'toggle-dim-btn', function () {
             var isDimmed = core.toggleDimSavedHotels();

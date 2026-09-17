@@ -33,6 +33,10 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 ## Extension Behavior
 
+**[2026-09-17] Count the named population** — `savedCount` is the whole saved union,
+not visible hotels. Test saved/visible counts that differ, duplicates and zero
+results. A happy-path test with equal counts cannot validate this UI contract.
+
 <!-- Format: **[YYYY-MM-DD] Brief title — Explanation -->
 
 **[2026-05-15] Bookmarklet badge cursor parity** — If the saved-count badge is clickable in the extension, keep the bookmarklet's inline CSS showing a pointer cursor too; otherwise the mobile surface hides the same affordance.
