@@ -114,6 +114,11 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(core.toggleDimSavedHotels(), true);
     });
 
+    test('dimmed names deduplicate repeated cards via normalized titles', ({ core, card }) => {
+        card(' ALPHA ', true); card('alpha', true); card('  ALPHA  ', true);
+        assert.deepEqual(plain(core.getDimmedHotelNames()), ['alpha']);
+    });
+
     test('clear removes storage, dimming and status state', ({ core, localStorage, card, document }) => {
         localStorage.setItem(key, '["alpha"]'); const alpha = card('alpha', true);
         core.clearSavedList();
@@ -150,6 +155,32 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         b.document.getElementById('clear-animals-btn').click();
         assert.equal(b.document.getElementById('bf-toast'), null);
         assert.equal(b.document.body.children.some(c => c.className === 'bf-toast'), false);
+    });
+
+    test('single-hotel clear uses singular text and 2000 ms dismissal, not the 3000 ms default', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            var __timers = [];
+            setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms }); return __timers.length; }
+        `);
+        b.localStorage.setItem(key, '["alpha"]');
+        b.document.getElementById('clear-animals-btn').click();
+        const toast = b.document.getElementById('bf-toast');
+        assert.equal(toast.textContent, 'Cleared 1 hotel');
+        const timer = b.__timers.find(t => t.ms === 2000);
+        assert.ok(timer, filename + ': singular clear dismissal scheduled at 2000 ms');
+        timer.fn();
+        assert.equal(b.document.getElementById('bf-toast'), null);
+    });
+
+    test('default toast dismissal is scheduled at 3000 ms', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            var __timers = [];
+            setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms }); return __timers.length; }
+        `);
+        b.document.getElementById('toggle-dim-btn').click();
+        const timer = b.__timers.find(t => t.ms === 3000);
+        assert.ok(timer, filename + ': default toast dismissal scheduled at 3000 ms');
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'Toggled dimming.');
     });
 
     test('guarded operations tolerate unavailable DOM', ({ core, document }) => {
