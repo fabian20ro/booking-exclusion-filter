@@ -114,6 +114,11 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(core.toggleDimSavedHotels(), true);
     });
 
+    test('dimmed names deduplicate repeated cards via normalized titles', ({ core, card }) => {
+        card(' ALPHA ', true); card('alpha', true); card('  ALPHA  ', true);
+        assert.deepEqual(plain(core.getDimmedHotelNames()), ['alpha']);
+    });
+
     test('clear removes storage, dimming and status state', ({ core, localStorage, card, document }) => {
         localStorage.setItem(key, '["alpha"]'); const alpha = card('alpha', true);
         core.clearSavedList();
