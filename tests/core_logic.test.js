@@ -291,6 +291,17 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(status.style.borderColor, '');
     });
 
+    test('copy all saved writes the exact newline-joined payload and reports the entry count', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        b.document.getElementById('copy-all-saved-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), ['alpha\nbeta']);
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'Copied 2 hotel names.');
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
