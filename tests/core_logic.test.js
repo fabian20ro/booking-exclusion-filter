@@ -302,6 +302,17 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.getElementById('bf-toast').textContent, 'Copied 2 hotel names.');
     });
 
+    test('copy as JSON writes the exact 2-space JSON payload', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        b.document.getElementById('copy-json-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), [JSON.stringify(['alpha', 'beta'], null, 2)]);
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'Copied JSON to clipboard.');
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
