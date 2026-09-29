@@ -337,6 +337,29 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.getElementById('bf-toast').textContent, 'No non-excluded hotels to copy.');
     });
 
+    test('copy dimmed writes only the dimmed hotel names and reports the copied count', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        `);
+        b.localStorage.setItem(key, '["alpha","beta"]');
+        b.card('alpha', true); b.card('beta', true);
+        b.document.getElementById('copy-dimmed-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), ['alpha\nbeta']);
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'Copied 2 dimmed hotel names.');
+    });
+
+    test('copy dimmed with nothing dimmed shows the no-copy toast without writing', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        `);
+        b.card('alpha'); b.card('beta');
+        b.document.getElementById('copy-dimmed-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), []);
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'No hotels currently dimmed.');
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
