@@ -337,6 +337,29 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.getElementById('bf-toast').textContent, 'No non-excluded hotels to copy.');
     });
 
+    test('copy dimmed writes only the dimmed hotel names and reports the copied count', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        `);
+        b.localStorage.setItem(key, '["alpha","beta"]');
+        b.card('alpha', true); b.card('beta', true);
+        b.document.getElementById('copy-dimmed-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), ['alpha\nbeta']);
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'Copied 2 dimmed hotel names.');
+    });
+
+    test('copy dimmed with nothing dimmed shows the no-copy toast without writing', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        `);
+        b.card('alpha'); b.card('beta');
+        b.document.getElementById('copy-dimmed-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), []);
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'No hotels currently dimmed.');
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
@@ -349,6 +372,58 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.throws(() => assert.deepEqual(plain(mutant.core.getSavedList()), ['alpha']), assert.AssertionError);
     });
 }
+
+// 'Copy saved' ships in the desktop panel only; the bookmarklet keeps the existing copy buttons,
+// so these cases assert the content.js surface outside the per-file loop.
+function testContentOnly(name, check) {
+    const browser = loadBrowser(sourceFiles['content.js']);
+    check(browser);
+    cases++;
+    console.log('PASS content.js: ' + name);
+}
+
+testContentOnly('copy saved writes the exact newline-joined saved payload in storage order and reports the count', () => {
+    const b = loadBrowser(sourceFiles['content.js'], src => src, `
+        var __timers = [];
+        window.__copyCalls = [];
+        navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+        setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms }); return __timers.length; };
+    `);
+    b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta', 'gamma']));
+    b.document.getElementById('copy-saved-btn').click();
+    assert.deepEqual(plain(b.window.__copyCalls), ['alpha\nbeta\ngamma']);
+    assert.equal(b.document.getElementById('bf-toast').textContent, 'Copied 3 hotels');
+    const timer = b.__timers.find(t => t.ms === 2000);
+    assert.ok(timer, 'content.js: copy saved dismissal scheduled at 2000 ms');
+    timer.fn();
+    assert.equal(b.document.getElementById('bf-toast'), null);
+});
+
+testContentOnly('copy saved on an empty list shows the no-copy toast without writing', () => {
+    const b = loadBrowser(sourceFiles['content.js'], src => src, `
+        window.__copyCalls = [];
+        navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (fn) { fn(); } }; } };
+    `);
+    b.document.getElementById('copy-saved-btn').click();
+    assert.deepEqual(plain(b.window.__copyCalls), []);
+    assert.equal(b.document.getElementById('bf-toast').textContent, 'No hotels to copy');
+});
+
+testContentOnly('copy saved button sits in the panel with its label and stays clickable across save, toggle and clear', ({ core, card, document }) => {
+    const btn = document.getElementById('copy-saved-btn');
+    assert.ok(btn, 'copy-saved-btn present');
+    assert.equal(btn.parentNode.id, 'animal-filter-panel');
+    assert.equal(btn.title, 'Copy saved');
+    assert.equal(btn.attributes['aria-label'], 'Copy saved');
+    card('alpha');
+    document.getElementById('save-animals-btn').click();
+    document.getElementById('toggle-dim-btn').click();
+    document.getElementById('clear-animals-btn').click();
+    assert.doesNotThrow(() => btn.click());
+    assert.equal(btn.id, 'copy-saved-btn');
+    assert.equal(document.getElementById('bf-toast').textContent, 'No hotels to copy');
+    assert.deepEqual(plain(core.getSavedList()), []);
+});
 
 console.log(cases + ' production-source cases passed across both platforms.');
 
