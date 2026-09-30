@@ -33,6 +33,11 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 ## Extension Behavior
 
+**[2026-10-01] Check the existing action before adding an approved feature** —
+`Copy all saved` already exports newline-separated saved names on both platforms.
+Approval does not prove the proposal's missing-behavior premise. Replay the existing
+button and compare payloads before adding another action; keep one canonical export.
+
 **[2026-09-17] Count the named population** — `savedCount` is the whole saved union,
 not visible hotels. Test saved/visible counts that differ, duplicates and zero
 results. A happy-path test with equal counts cannot validate this UI contract.

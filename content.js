@@ -436,11 +436,6 @@
                 if (!dimmed.length) { showMessage('No hotels currently dimmed.'); return; }
                 copyText(dimmed.join('\n'), function(c){showMessage('Copied '+c+' dimmed hotel names.');}, null);
             }],
-            ['Copy saved', '\uD83D\uDC1B', 'copy-saved-btn', function () {
-                var saved = core.getSavedList();
-                if (!saved.length) { showMessage('No hotels to copy'); return; }
-                copyText(saved.join('\n'), function (c) { showMessage('Copied ' + c + ' hotels', 2000); }, null);
-            }],
             ['Clear hotel filter list', '\uD83E\uDDF9', 'clear-animals-btn', function () {
                 if (!confirm('Are you sure you want to clear the hotel filter list?')) return;
                 var clearedCount = core.getSavedList().length;

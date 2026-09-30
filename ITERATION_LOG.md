@@ -203,3 +203,20 @@ names; JavaScript syntax checks PASS. No dependencies added.
 **Outcome:** Success
 **Insight:** Repository and Pages URLs must move together; stable extension and storage identifiers should not change during a repository-only migration.
 **Promoted to Lessons Learned:** No
+
+---
+
+### [2026-10-01] Remove duplicate saved-name clipboard action
+
+**Context:** Approved feature added desktop `Copy saved` although `Copy all saved`
+already implements the same export on desktop and mobile.
+**What happened:** Browser-fixture replay produced identical `alpha\nbeta` payloads
+from both desktop buttons. Added a regression test for one saved-name export action
+on each shipping surface; observed RED (2 actions instead of 1), removed only the
+redundant desktop action and its desktop-only tests. Preserved empty-list no-write
+coverage against the canonical action on both platforms. Existing clipboard-count,
+toast timers, clear, dimming and ES5 runtime behavior unchanged.
+**Outcome:** 74 production-source cases plus the legacy ES5 runtime check pass.
+**Insight:** Source/behavior evidence must establish absence; user approval alone
+does not make an already-existing feature absent.
+**Promoted to Lessons Learned:** Yes
