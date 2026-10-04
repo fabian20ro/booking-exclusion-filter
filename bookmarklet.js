@@ -239,6 +239,8 @@
                         newSpan.style.color = '#52c41a';
                         newSpan.style.cursor = 'pointer';
                         newSpan.textContent = '(+' + nonExcluded.length + ' new)';
+                        newSpan.setAttribute('tabindex', '0');
+                        newSpan.setAttribute('role', 'button');
                         status.appendChild(newSpan);
                         (function (_preview, _spanEl) {
                             var previewed = false;
@@ -290,6 +292,12 @@
                                 } else {
                                     setHoverListVisible(false);
                                     previewed = false;
+                                }
+                            });
+                            _spanEl.addEventListener('keydown', function (event) {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    _spanEl.click();
                                 }
                             });
                         })(nonExcluded, newSpan);
