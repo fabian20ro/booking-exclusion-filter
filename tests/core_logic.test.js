@@ -391,6 +391,32 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
     });
 }
 
+// The '+N new' preview indicator is keyboard-activatable on the bookmarklet surface.
+{
+    const browser = loadBrowser(sourceFiles['bookmarklet.js']);
+    browser.localStorage.setItem(key, '["alpha"]');
+    browser.card('alpha');
+    browser.card('Beta');
+    browser.core.applyDimming();
+    browser.core.updateStatus();
+    const preview = browser.document.getElementById('hotel-list-status').querySelectorAll('span').find(s => s.textContent.includes('new'));
+    assert.equal(preview.attributes['tabindex'], '0');
+    assert.equal(preview.attributes['role'], 'button');
+    const list = browser.document.getElementById('hover-hotel-list');
+    list.insertBefore = function (newNode, refNode) {
+        const i = refNode ? list.children.indexOf(refNode) : -1;
+        if (i >= 0) list.children.splice(i, 0, newNode); else list.children.push(newNode);
+        newNode.parentNode = list;
+    };
+    preview.dispatch('keydown', { key: 'Enter', preventDefault() {}, stopPropagation() {} });
+    assert.equal(list.style.display, 'block');
+    assert.ok(list.textContent.includes('beta'));
+    preview.dispatch('keydown', { key: 'Enter', preventDefault() {}, stopPropagation() {} });
+    assert.equal(list.style.display, 'none');
+    cases++;
+    console.log('PASS bookmarklet.js: new-preview keyboard open and Enter toggle');
+}
+
 console.log(cases + ' production-source cases passed across both platforms.');
 
 // Older bookmarklet execution environments lack these ES2015 collection APIs.
