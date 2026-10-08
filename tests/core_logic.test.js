@@ -400,6 +400,20 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.getElementById('bf-toast').textContent, 'No visible hotels found.');
     });
 
+    test('rejected clipboard write falls back to execCommand copy and shows no spurious toast', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__copyCalls = [];
+            window.__execCommands = [];
+            navigator.clipboard = { writeText: function (t) { window.__copyCalls.push(t); return { then: function (ok, reject) { reject(); } }; } };
+            document.execCommand = function (cmd) { window.__execCommands.push(cmd); return true; };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        b.document.getElementById('copy-all-saved-btn').click();
+        assert.deepEqual(plain(b.window.__copyCalls), ['alpha\nbeta']);
+        assert.deepEqual(plain(b.window.__execCommands), ['copy']);
+        assert.equal(b.document.getElementById('bf-toast'), null);
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
