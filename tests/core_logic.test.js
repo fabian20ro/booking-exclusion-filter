@@ -112,6 +112,16 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.match(document.getElementById('hotel-list-status').textContent, /^No hotels saved/);
     });
 
+    test('removing one of multiple saved hotels updates list, dimming and status', ({ core, localStorage, card, document }) => {
+        localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        const alpha = card('alpha'), beta = card('beta');
+        core.removeHotel('alpha');
+        assert.deepEqual(plain(core.getSavedList()), ['beta']);
+        assert.equal(alpha.classList.contains('bf-dimmed'), false);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotels saved \(1 dimmed\) \(1 visible\)/);
+    });
+
     test('dimming is idempotent and toggle round-trips', ({ core, card, localStorage }) => {
         localStorage.setItem(key, '["Alpha"]');
         const alpha = card('alpha'), beta = card('beta', true);
