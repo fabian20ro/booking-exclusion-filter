@@ -280,6 +280,32 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.ok(list.textContent.includes('beta inn'));
     });
 
+    test('saved-list remove button confirms, removes, un-dims and re-renders', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__confirms = [];
+            window.__confirmAnswer = true;
+            confirm = function (msg) { window.__confirms.push(String(msg)); return window.__confirmAnswer; };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        const alpha = b.card('alpha');
+        b.core.applyDimming();
+        b.document.getElementById('hotel-list-status').click();
+        const list = b.document.getElementById('hover-hotel-list');
+        const button = list.querySelector('ul').children.find(li => li.textContent.includes('alpha')).querySelector('button');
+        b.window.__confirmAnswer = false;
+        button.click();
+        assert.deepEqual(plain(b.window.__confirms), ['Remove alpha from the list?']);
+        assert.deepEqual(plain(b.core.getSavedList()), ['alpha', 'beta']);
+        assert.equal(alpha.classList.contains('bf-dimmed'), true);
+        b.window.__confirmAnswer = true;
+        button.click();
+        assert.deepEqual(plain(b.core.getSavedList()), ['beta']);
+        assert.equal(alpha.classList.contains('bf-dimmed'), false);
+        const rendered = list.querySelector('ul').children.map(li => li.textContent);
+        assert.ok(rendered.some(text => text.includes('beta')));
+        assert.ok(!rendered.some(text => text.includes('alpha')));
+    });
+
     test('status preview shows only non-excluded visible hotels', ({ core, localStorage, card, document }) => {
         const status = document.getElementById('hotel-list-status');
         localStorage.setItem(key, '["alpha"]');
