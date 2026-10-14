@@ -248,6 +248,13 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(alpha.classList.contains('bf-dimmed'), true);
         document.getElementById('toggle-dim-btn').click();
         assert.equal(alpha.classList.contains('bf-dimmed'), false);
+        const toggleBtn = document.getElementById('toggle-dim-btn');
+        assert.equal(toggleBtn.title, 'Dim saved hotels');
+        assert.equal(toggleBtn.attributes['aria-label'], 'Dim saved hotels');
+        toggleBtn.click();
+        assert.equal(alpha.classList.contains('bf-dimmed'), true);
+        assert.equal(toggleBtn.title, 'Show all hotels');
+        assert.equal(toggleBtn.attributes['aria-label'], 'Show all hotels');
         document.getElementById('clear-animals-btn').click();
         assert.deepEqual(plain(core.getSavedList()), []);
         assert.deepEqual(errors, []);
