@@ -195,73 +195,11 @@
                         newSpan.textContent = '(+' + nonExcluded.length + ' new)';
                         status.textContent = text;
                         status.appendChild(newSpan);
-                        (function (_preview, _spanEl) {
-                            var previewed = false;
-                            _spanEl.addEventListener('click', function () {
-                                if (!previewed) {
-                                    renderSavedList(hoverList, filterInput.value);
-                                    // Replace preview with non-excluded list.
-                                    var ul = hoverList.querySelector('ul');
-                                    if (ul) {
-                                        while (ul.firstChild) ul.removeChild(ul.firstChild);
-                                    } else {
-                                        ul = document.createElement('ul');
-                                        hoverList.appendChild(ul);
-                                    }
-                                    if (!nonExcluded.length) {
-                                        var empty = document.createElement('li');
-                                        empty.innerHTML = '<i>No non-excluded hotels</i>';
-                                        ul.appendChild(empty);
-                                    } else {
-                                        nonExcluded.forEach(function (name) {
-                                            var li = document.createElement('li');
-                                            li.style.display = 'flex';
-                                            li.style.justifyContent = 'space-between';
-                                            li.style.alignItems = 'center';
-                                            var span = document.createElement('span');
-                                            span.textContent = name;
-                                            li.appendChild(span);
-                                            var btn = document.createElement('button');
-                                            btn.textContent = '\u2715';
-                                            btn.title = 'Add this hotel to saved list';
-                                            btn.style.border = 'none';
-                                            btn.style.background = 'none';
-                                            btn.style.color = '#1f67ff';
-                                            btn.style.cursor = 'pointer';
-                                            btn.style.padding = '0 4px';
-                                            btn.style.fontSize = '16px';
-                                            btn.addEventListener('click', function (e) {
-                                                e.stopPropagation();
-                                                core.mergeSavedWithVisible([name]);
-                                                showMessage('Added ' + name + '.');
-                                                _spanEl.click(); // close preview
-                                            });
-                                            li.appendChild(btn);
-                                            ul.appendChild(li);
-                                        });
-                                    }
-                                    var closeBtn = document.createElement('button');
-                                    closeBtn.textContent = '\u00D7 Close';
-                                    closeBtn.title = 'Close preview';
-                                    closeBtn.style.marginTop = '8px';
-                                    closeBtn.style.border = '1px solid #ccc';
-                                    closeBtn.style.background = '#f7f9ff';
-                                    closeBtn.style.borderRadius = '6px';
-                                    closeBtn.style.padding = '4px 10px';
-                                    closeBtn.style.cursor = 'pointer';
-                                    closeBtn.addEventListener('click', function () {
-                                        setHoverListVisible(false);
-                                        previewed = false;
-                                    });
-                                    ul.parentNode.insertBefore(closeBtn, ul.nextSibling);
-                                    setHoverListVisible(true);
-                                    previewed = true;
-                                } else {
-                                    setHoverListVisible(false);
-                                    previewed = false;
-                                }
-                            });
-                        })(nonExcluded, newSpan);
+                        newSpan.setAttribute('data-bf-new-preview', 'true');
+                        newSpan.setAttribute('tabindex', '0');
+                        newSpan.setAttribute('role', 'button');
+                        newSpan.setAttribute('aria-controls', 'hover-hotel-list');
+                        newSpan.setAttribute('aria-expanded', status.getAttribute('aria-expanded') || 'false');
                     } else {
                         status.textContent = text;
                     }
@@ -390,6 +328,12 @@
             hoverList.style.display = visible ? 'block' : 'none';
             hoverList.setAttribute('aria-hidden', visible ? 'false' : 'true');
             status.setAttribute('aria-expanded', visible ? 'true' : 'false');
+            var indicators = status.querySelectorAll('span');
+            for (var i = 0; i < indicators.length; i++) {
+                if (indicators[i].getAttribute('data-bf-new-preview') === 'true') {
+                    indicators[i].setAttribute('aria-expanded', visible ? 'true' : 'false');
+                }
+            }
             if (visible && document.activeElement !== filterInput) {
                 try { filterInput.focus(); } catch (e) {}
             }
@@ -453,7 +397,85 @@
             panel.appendChild(btn);
         });
 
-        status.addEventListener('click', function() {
+        function isNewPreviewTarget(target) {
+            while (target && target !== status) {
+                if (target.getAttribute && target.getAttribute('data-bf-new-preview') === 'true') return true;
+                target = target.parentNode;
+            }
+            return false;
+        }
+
+        function clearPreviewList(listEl, mode) {
+            var close = listEl.querySelector('#bf-preview-close');
+            if (close) close.parentNode.removeChild(close);
+            var ul = listEl.querySelector('ul');
+            if (ul) ul.innerHTML = '';
+            else {
+                ul = document.createElement('ul');
+                listEl.appendChild(ul);
+            }
+            listEl.setAttribute('data-bf-preview', mode);
+            return ul;
+        }
+
+        function renderNewHotels() {
+            var ul = clearPreviewList(hoverList, 'new');
+            var names = core.getNonExcludedVisibleHotels();
+            names.forEach(function (name) {
+                var li = document.createElement('li');
+                li.style.display = 'flex';
+                li.style.justifyContent = 'space-between';
+                li.style.alignItems = 'center';
+                var span = document.createElement('span');
+                span.textContent = name;
+                li.appendChild(span);
+                var btn = document.createElement('button');
+                btn.textContent = '\u2715';
+                btn.title = 'Add this hotel to saved list';
+                btn.style.border = 'none';
+                btn.style.background = 'none';
+                btn.style.color = '#1f67ff';
+                btn.style.cursor = 'pointer';
+                btn.style.padding = '0 4px';
+                btn.style.fontSize = '16px';
+                btn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    core.mergeSavedWithVisible([name]);
+                    showMessage('Added ' + name + '.');
+                    setHoverListVisible(false);
+                });
+                li.appendChild(btn);
+                ul.appendChild(li);
+            });
+            var close = document.createElement('button');
+            close.id = 'bf-preview-close';
+            close.textContent = '\u00D7 Close';
+            close.title = 'Close preview';
+            close.style.marginTop = '8px';
+            close.style.border = '1px solid #ccc';
+            close.style.background = '#f7f9ff';
+            close.style.borderRadius = '6px';
+            close.style.padding = '4px 10px';
+            close.style.cursor = 'pointer';
+            close.addEventListener('click', function () { setHoverListVisible(false); });
+            ul.parentNode.insertBefore(close, ul.nextSibling);
+        }
+
+        function toggleNewPreview() {
+            if (hoverList.style.display === 'block' && hoverList.getAttribute('data-bf-preview') === 'new') {
+                setHoverListVisible(false);
+            } else {
+                renderNewHotels();
+                setHoverListVisible(true);
+            }
+        }
+
+        status.addEventListener('click', function(event) {
+            if (isNewPreviewTarget(event.target)) {
+                event.stopPropagation();
+                toggleNewPreview();
+                return;
+            }
             var visible = hoverList.style.display !== 'block';
             if (visible) renderSavedList(hoverList, filterInput.value);
             setHoverListVisible(visible);
@@ -461,7 +483,9 @@
         status.addEventListener('keydown', function (event) {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                status.click();
+                event.stopPropagation();
+                if (isNewPreviewTarget(event.target)) toggleNewPreview();
+                else status.click();
             }
         });
 
@@ -478,13 +502,7 @@
         core.updateStatus();
 
         function renderSavedList(listEl, filter) {
-            var ul = listEl.querySelector('ul');
-            if (ul) {
-                ul.innerHTML = '';
-            } else {
-                ul = document.createElement('ul');
-                listEl.appendChild(ul);
-            }
+            var ul = clearPreviewList(listEl, 'saved');
             var saved = core.getSavedList();
             if (!saved.length) {
                 var empty = document.createElement('li');

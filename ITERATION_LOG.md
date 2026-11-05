@@ -220,3 +220,25 @@ toast timers, clear, dimming and ES5 runtime behavior unchanged.
 **Insight:** Source/behavior evidence must establish absence; user approval alone
 does not make an already-existing feature absent.
 **Promoted to Lessons Learned:** Yes
+
+---
+
+### [2026-11-05] Repair the existing new-hotels preview consumer
+
+**Context:** Repeated Add-all attempts exposed an earlier extension lexical-scope
+error and a bookmarklet click-bubbling defect; neither was an Add-all regression.
+**What happened:** Added the actual indicator-click counterexample first; observed
+RED with unchanged production. Replaced the fixture's one-off insertion shim with
+shared DOM insertion/event propagation. Moved preview interaction into the UI
+owner in both shipping scripts; status calculation only marks the indicator.
+Central visibility/ARIA, Close/Escape/reopen, keyboard and individual-save paths
+now use the current preview, never a detached indicator's synthetic click.
+**Outcome:** 92 production-source cases and the legacy ES5 runtime check pass.
+Real-browser baseline comparison reproduces the extension ReferenceError and
+bookmarklet immediate close; repaired desktop surfaces and 390px mobile bookmarklet
+pass the same click/save/reopen checks. No Add-all feature, dependency, storage
+schema change or revival of old feature approval. Physical-device/Booking live-site
+validation remains separate from the controlled real-DOM replay.
+**Insight:** Keep test oracle/fixture fixed across the production fix; baseline
+check failures and missing fixture primitives are not proof of a new regression.
+**Promoted to Lessons Learned:** Yes
