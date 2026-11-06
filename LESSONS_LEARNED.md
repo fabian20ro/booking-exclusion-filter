@@ -64,6 +64,14 @@ results. A happy-path test with equal counts cannot validate this UI contract.
 
 ## Code Patterns & Pitfalls
 
+**[2026-11-05] Preview events belong to the UI owner** — The new-hotels indicator
+is rebuilt by status updates. Delegate its click/keyboard activation to the stable
+status listener inside the UI scope; close the preview directly after saving,
+not by clicking a detached indicator. Browser fixtures must bubble click/keyboard
+events and implement shared DOM insertion primitives. A passing saved-list suite
+did not cover the distinct `(+N new)` consumer: replay that exact action before
+attributing a new feature test failure to the feature patch.
+
 **[2026-09-07] Test shipping code, not copied helpers** — `node tests/core_logic.test.js` executes both complete scripts using the dependency-free `tests/browser_fixture.js` VM harness. Assert through the real `window.__bookingFilter` core or mounted button callbacks; never paste production functions into tests or embed eval-based pseudo-tests in browser assets. Mutation controls must fail when the source normalizer is broken in memory. Bookmarklet tests also disable ES2015 collection APIs to protect the ES5 runtime contract.
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->

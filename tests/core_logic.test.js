@@ -313,6 +313,83 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.ok(!rendered.some(text => text.includes('alpha')));
     });
 
+    test('new-preview click shows distinct non-excluded hotels without changing saved names', ({ core, localStorage, card, document, errors }) => {
+        localStorage.setItem(key, '["alpha"]');
+        card('alpha'); card('Beta'); card(' BETA '); card('Gamma');
+        core.applyDimming();
+        core.updateStatus();
+        const status = document.getElementById('hotel-list-status');
+        const indicator = status.querySelectorAll('span').find(span => span.textContent.includes('new'));
+        indicator.click();
+        const list = document.getElementById('hover-hotel-list');
+        assert.equal(list.style.display, 'block');
+        assert.deepEqual(list.querySelector('ul').children.map(row => row.querySelector('span').textContent), ['beta', 'gamma']);
+        assert.equal(localStorage.getItem(key), '["alpha"]');
+        assert.deepEqual(errors, []);
+    });
+
+    test('new-preview Close and Escape allow reopening without duplicate controls', ({ core, localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha"]');
+        card('Beta');
+        core.updateStatus();
+        const status = document.getElementById('hotel-list-status');
+        const indicator = status.querySelectorAll('span').find(span => span.textContent.includes('new'));
+        const list = document.getElementById('hover-hotel-list');
+        for (const close of [
+            () => list.querySelectorAll('button').find(button => button.title === 'Close preview').click(),
+            () => document.getElementById('animal-filter-panel').dispatch('keydown', { key: 'Escape' }),
+            () => indicator.click()
+        ]) {
+            indicator.click();
+            assert.equal(list.style.display, 'block');
+            assert.equal(list.querySelectorAll('button').filter(button => button.title === 'Close preview').length, 1);
+            assert.equal(status.attributes['aria-expanded'], 'true');
+            assert.equal(indicator.attributes['aria-expanded'], 'true');
+            close();
+            assert.equal(list.style.display, 'none');
+            assert.equal(list.attributes['aria-hidden'], 'true');
+            assert.equal(indicator.attributes['aria-expanded'], 'false');
+        }
+        status.click();
+        assert.equal(list.style.display, 'block');
+        assert.equal(list.querySelectorAll('button').filter(button => button.title === 'Close preview').length, 0);
+        assert.equal(list.querySelector('ul').children[0].querySelector('span').textContent, 'alpha');
+    });
+
+    test('individual preview save closes and a fresh indicator opens the remaining hotels', ({ core, localStorage, card, document, errors }) => {
+        localStorage.setItem(key, '["alpha"]');
+        const beta = card('Beta'), gamma = card('Gamma');
+        core.updateStatus();
+        const status = document.getElementById('hotel-list-status');
+        status.querySelectorAll('span').find(span => span.textContent.includes('new')).click();
+        const list = document.getElementById('hover-hotel-list');
+        list.querySelector('ul').children[0].querySelector('button').click();
+        assert.deepEqual(JSON.parse(localStorage.getItem(key)), ['alpha', 'beta']);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+        assert.equal(gamma.classList.contains('bf-dimmed'), false);
+        assert.equal(document.getElementById('bf-toast').textContent, 'Added beta.');
+        assert.equal(list.style.display, 'none');
+        status.querySelectorAll('span').find(span => span.textContent.includes('new')).click();
+        assert.equal(list.style.display, 'block');
+        assert.deepEqual(list.querySelector('ul').children.map(row => row.querySelector('span').textContent), ['gamma']);
+        assert.deepEqual(errors, []);
+    });
+
+    test('new-preview Enter and Space each activate once through the real status listener', ({ core, card, document }) => {
+        card('Beta');
+        core.updateStatus();
+        const indicator = document.getElementById('hotel-list-status').querySelectorAll('span').find(span => span.textContent.includes('new'));
+        const list = document.getElementById('hover-hotel-list');
+        assert.equal(indicator.attributes['tabindex'], '0');
+        assert.equal(indicator.attributes['role'], 'button');
+        for (const key of ['Enter', ' ']) {
+            assert.equal(indicator.dispatch('keydown', { key }).defaultPrevented, true);
+            assert.equal(list.style.display, 'block');
+            indicator.dispatch('keydown', { key });
+            assert.equal(list.style.display, 'none');
+        }
+    });
+
     test('status preview shows only non-excluded visible hotels', ({ core, localStorage, card, document }) => {
         const status = document.getElementById('hotel-list-status');
         localStorage.setItem(key, '["alpha"]');
@@ -468,32 +545,6 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         mutant.localStorage.setItem(key, '[" Alpha "]');
         assert.throws(() => assert.deepEqual(plain(mutant.core.getSavedList()), ['alpha']), assert.AssertionError);
     });
-}
-
-// The '+N new' preview indicator is keyboard-activatable on the bookmarklet surface.
-{
-    const browser = loadBrowser(sourceFiles['bookmarklet.js']);
-    browser.localStorage.setItem(key, '["alpha"]');
-    browser.card('alpha');
-    browser.card('Beta');
-    browser.core.applyDimming();
-    browser.core.updateStatus();
-    const preview = browser.document.getElementById('hotel-list-status').querySelectorAll('span').find(s => s.textContent.includes('new'));
-    assert.equal(preview.attributes['tabindex'], '0');
-    assert.equal(preview.attributes['role'], 'button');
-    const list = browser.document.getElementById('hover-hotel-list');
-    list.insertBefore = function (newNode, refNode) {
-        const i = refNode ? list.children.indexOf(refNode) : -1;
-        if (i >= 0) list.children.splice(i, 0, newNode); else list.children.push(newNode);
-        newNode.parentNode = list;
-    };
-    preview.dispatch('keydown', { key: 'Enter', preventDefault() {}, stopPropagation() {} });
-    assert.equal(list.style.display, 'block');
-    assert.ok(list.textContent.includes('beta'));
-    preview.dispatch('keydown', { key: 'Enter', preventDefault() {}, stopPropagation() {} });
-    assert.equal(list.style.display, 'none');
-    cases++;
-    console.log('PASS bookmarklet.js: new-preview keyboard open and Enter toggle');
 }
 
 console.log(cases + ' production-source cases passed across both platforms.');

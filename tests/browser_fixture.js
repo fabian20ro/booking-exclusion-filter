@@ -9,12 +9,40 @@ function element(tag) {
         tagName: tag, children: [], attributes: {}, style: {}, value: '',
         parentNode: null, _text: '',
         setAttribute(name, value) { this.attributes[name] = value; },
-        appendChild(child) { child.parentNode = this; this.children.push(child); return child; },
+        getAttribute(name) { return this.attributes[name] ?? null; },
+        appendChild(child) {
+            if (child.parentNode) child.parentNode.removeChild(child);
+            child.parentNode = this; this.children.push(child); return child;
+        },
+        insertBefore(child, reference) {
+            if (reference === null) return this.appendChild(child);
+            if (!this.children.includes(reference)) throw Error('reference is not a child');
+            if (child === reference) return child;
+            if (child.parentNode) child.parentNode.removeChild(child);
+            child.parentNode = this;
+            this.children.splice(this.children.indexOf(reference), 0, child);
+            return child;
+        },
         removeChild(child) { this.children.splice(this.children.indexOf(child), 1); child.parentNode = null; },
         remove() { if (this.parentNode) this.parentNode.removeChild(this); },
         addEventListener(name, callback) { (listeners[name] ||= []).push(callback); },
-        dispatch(name, event = {}) { for (const fn of listeners[name] || []) fn(event); },
-        click() { this.dispatch('click', { stopPropagation() {}, preventDefault() {} }); if (this.onclick) this.onclick(); },
+        dispatch(name, supplied = {}) {
+            const path = [];
+            for (let target = this; target; target = target.parentNode) path.push(target);
+            let stopped = false;
+            const event = { ...supplied, target: this, defaultPrevented: false,
+                stopPropagation() { stopped = true; supplied.stopPropagation?.(); },
+                preventDefault() { this.defaultPrevented = true; supplied.preventDefault?.(); }
+            };
+            for (const current of path) {
+                event.currentTarget = current;
+                for (const fn of current._listeners[name] || []) fn(event);
+                if (name === 'click' && current.onclick) current.onclick(event);
+                if (stopped || !['click', 'keydown', 'keyup', 'input'].includes(name)) break;
+            }
+            return event;
+        },
+        click() { this.dispatch('click'); },
         focus() {}, select() {},
         classList: {
             add(name) { classes.add(name); }, remove(name) { classes.delete(name); },
@@ -28,13 +56,15 @@ function element(tag) {
                     : child.tagName === selector;
             return this.children.flatMap(child => [ ...(matches(child) ? [child] : []), ...child.querySelectorAll(selector) ]);
         },
-        querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+        querySelector(selector) { return this.querySelectorAll(selector)[0] || null; },
+        _listeners: listeners
     };
     Object.defineProperties(node, {
         textContent: { get() { return this._text + this.children.map(child => child.textContent).join(''); },
-            set(value) { this._text = String(value); this.children = []; } },
-        innerHTML: { set(value) { this._text = String(value); this.children = []; } },
-        firstChild: { get() { return this.children[0] || null; } }
+            set(value) { this._text = String(value); for (const child of this.children) child.parentNode = null; this.children = []; } },
+        innerHTML: { set(value) { this.textContent = value; } },
+        firstChild: { get() { return this.children[0] || null; } },
+        nextSibling: { get() { return this.parentNode?.children[this.parentNode.children.indexOf(this) + 1] || null; } }
     });
     return node;
 }
