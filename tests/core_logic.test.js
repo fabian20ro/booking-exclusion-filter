@@ -270,6 +270,17 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(list.style.display, 'none');
     });
 
+    test('saved list closes when the pointer leaves the panel', ({ core, document }) => {
+        core.mergeSavedWithVisible(['alpha']);
+        document.getElementById('hotel-list-status').click();
+        const list = document.getElementById('hover-hotel-list');
+        assert.equal(list.style.display, 'block');
+        document.getElementById('animal-filter-panel').dispatch('mouseleave');
+        assert.equal(list.style.display, 'none');
+        assert.equal(list.attributes['aria-hidden'], 'true');
+        assert.equal(document.getElementById('hotel-list-status').attributes['aria-expanded'], 'false');
+    });
+
     test('saved-list filter input re-renders matching and no-match states', ({ core, document }) => {
         core.mergeSavedWithVisible(['Alpha Hotel', 'Beta Inn']);
         const list = document.getElementById('hover-hotel-list');
@@ -534,6 +545,23 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.getElementById('bf-toast'), null);
     });
 
+    test('copy without a clipboard API falls back to execCommand with the staged payload', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__execCommands = [];
+            var __created = [];
+            var __create = document.createElement;
+            document.createElement = function (tag) { var el = __create(tag); __created.push(el); return el; };
+            document.execCommand = function (cmd) { window.__execCommands.push(cmd); return true; };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        b.document.getElementById('copy-all-saved-btn').click();
+        const staged = b.__created.filter(el => el.tagName === 'textarea');
+        assert.equal(staged.length, 1, filename + ': legacy copy stages the payload in a temporary textarea');
+        assert.equal(staged[0].value, 'alpha\nbeta');
+        assert.deepEqual(plain(b.window.__execCommands), ['copy']);
+        assert.equal(b.document.getElementById('bf-toast'), null);
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
@@ -544,6 +572,25 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         });
         mutant.localStorage.setItem(key, '[" Alpha "]');
         assert.throws(() => assert.deepEqual(plain(mutant.core.getSavedList()), ['alpha']), assert.AssertionError);
+    });
+
+    test('newly listed saved hotels are re-dimmed through the debounced mutation observer', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            var __timers = [];
+            var __observers = [];
+            setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms, cancelled: false }); return __timers.length; };
+            clearTimeout = function (id) { if (__timers[id - 1]) __timers[id - 1].cancelled = true; };
+            MutationObserver = function (cb) { __observers.push(cb); this.observe = function () {}; };
+        `);
+        b.localStorage.setItem(key, '["alpha"]');
+        const incoming = b.card(' ALPHA ');
+        b.__observers[0]();
+        b.__observers[0]();
+        const pending = b.__timers.filter(t => t.ms === 500 && !t.cancelled);
+        assert.equal(pending.length, 1, filename + ': rapid mutations coalesce into one 500 ms re-dim');
+        pending[0].fn();
+        assert.equal(incoming.classList.contains('bf-dimmed'), true, filename + ': listed saved hotel is dimmed without a user click');
+        assert.deepEqual(b.errors, []);
     });
 }
 
