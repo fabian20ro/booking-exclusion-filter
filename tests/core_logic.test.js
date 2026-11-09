@@ -270,6 +270,17 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(list.style.display, 'none');
     });
 
+    test('saved list closes when the pointer leaves the panel', ({ core, document }) => {
+        core.mergeSavedWithVisible(['alpha']);
+        document.getElementById('hotel-list-status').click();
+        const list = document.getElementById('hover-hotel-list');
+        assert.equal(list.style.display, 'block');
+        document.getElementById('animal-filter-panel').dispatch('mouseleave');
+        assert.equal(list.style.display, 'none');
+        assert.equal(list.attributes['aria-hidden'], 'true');
+        assert.equal(document.getElementById('hotel-list-status').attributes['aria-expanded'], 'false');
+    });
+
     test('saved-list filter input re-renders matching and no-match states', ({ core, document }) => {
         core.mergeSavedWithVisible(['Alpha Hotel', 'Beta Inn']);
         const list = document.getElementById('hover-hotel-list');
