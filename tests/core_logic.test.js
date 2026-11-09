@@ -534,6 +534,23 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.getElementById('bf-toast'), null);
     });
 
+    test('copy without a clipboard API falls back to execCommand with the staged payload', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__execCommands = [];
+            var __created = [];
+            var __create = document.createElement;
+            document.createElement = function (tag) { var el = __create(tag); __created.push(el); return el; };
+            document.execCommand = function (cmd) { window.__execCommands.push(cmd); return true; };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        b.document.getElementById('copy-all-saved-btn').click();
+        const staged = b.__created.filter(el => el.tagName === 'textarea');
+        assert.equal(staged.length, 1, filename + ': legacy copy stages the payload in a temporary textarea');
+        assert.equal(staged[0].value, 'alpha\nbeta');
+        assert.deepEqual(plain(b.window.__execCommands), ['copy']);
+        assert.equal(b.document.getElementById('bf-toast'), null);
+    });
+
     // Mutation control: break the shipping read normalizer in memory, never on disk.
     // The exact same behavior assertion must fail, proving tests do not run a copy.
     test('production mutation is detected by normalization assertion', () => {
