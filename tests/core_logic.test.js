@@ -545,6 +545,25 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         mutant.localStorage.setItem(key, '[" Alpha "]');
         assert.throws(() => assert.deepEqual(plain(mutant.core.getSavedList()), ['alpha']), assert.AssertionError);
     });
+
+    test('newly listed saved hotels are re-dimmed through the debounced mutation observer', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            var __timers = [];
+            var __observers = [];
+            setTimeout = function (fn, ms) { __timers.push({ fn: fn, ms: ms, cancelled: false }); return __timers.length; };
+            clearTimeout = function (id) { if (__timers[id - 1]) __timers[id - 1].cancelled = true; };
+            MutationObserver = function (cb) { __observers.push(cb); this.observe = function () {}; };
+        `);
+        b.localStorage.setItem(key, '["alpha"]');
+        const incoming = b.card(' ALPHA ');
+        b.__observers[0]();
+        b.__observers[0]();
+        const pending = b.__timers.filter(t => t.ms === 500 && !t.cancelled);
+        assert.equal(pending.length, 1, filename + ': rapid mutations coalesce into one 500 ms re-dim');
+        pending[0].fn();
+        assert.equal(incoming.classList.contains('bf-dimmed'), true, filename + ': listed saved hotel is dimmed without a user click');
+        assert.deepEqual(b.errors, []);
+    });
 }
 
 console.log(cases + ' production-source cases passed across both platforms.');
