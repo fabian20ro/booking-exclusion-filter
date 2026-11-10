@@ -175,6 +175,27 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(b.document.body.children.some(c => c.className === 'bf-toast'), false);
     });
 
+    test('declined clear confirmation preserves the saved list, dimming and status', () => {
+        const b = loadBrowser(sourceFiles[filename], src => src, `
+            window.__confirms = [];
+            window.__confirmAnswer = false;
+            confirm = function (msg) { window.__confirms.push(String(msg)); return window.__confirmAnswer; };
+        `);
+        b.localStorage.setItem(key, JSON.stringify(['alpha', 'beta']));
+        const alpha = b.card('alpha', true);
+        const beta = b.card('beta', true);
+        b.core.applyDimming();
+        b.core.updateStatus();
+        b.document.getElementById('clear-animals-btn').click();
+        assert.deepEqual(plain(b.window.__confirms), ['Are you sure you want to clear the hotel filter list?']);
+        assert.deepEqual(plain(b.core.getSavedList()), ['alpha', 'beta']);
+        assert.equal(b.localStorage.getItem(key), JSON.stringify(['alpha', 'beta']));
+        assert.equal(alpha.classList.contains('bf-dimmed'), true);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+        assert.equal(b.document.getElementById('bf-toast'), null);
+        assert.match(b.document.getElementById('hotel-list-status').textContent, /2 hotels saved/);
+    });
+
     test('single-hotel clear uses singular text and 2000 ms dismissal, not the 3000 ms default', () => {
         const b = loadBrowser(sourceFiles[filename], src => src, `
             var __timers = [];
