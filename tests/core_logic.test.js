@@ -198,7 +198,23 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         b.document.getElementById('toggle-dim-btn').click();
         const timer = b.__timers.find(t => t.ms === 3000);
         assert.ok(timer, filename + ': default toast dismissal scheduled at 3000 ms');
-        assert.equal(b.document.getElementById('bf-toast').textContent, 'Toggled dimming.');
+        assert.equal(b.document.getElementById('bf-toast').textContent, 'Dimming off \u2014 all hotels visible.');
+    });
+
+    test('toggle-dim toast and labels report the resulting dimming state', ({ localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha"]');
+        card('alpha');
+        const btn = () => document.getElementById('toggle-dim-btn');
+        const toast = () => document.getElementById('bf-toast');
+        btn().click();
+        btn().click();
+        assert.equal(toast().textContent, 'Dimming off \u2014 all hotels visible.');
+        assert.equal(btn().title, 'Dim saved hotels');
+        assert.equal(btn().getAttribute('aria-label'), 'Dim saved hotels');
+        btn().click();
+        assert.equal(toast().textContent, 'Dimming on \u2014 hotels dimmed.');
+        assert.equal(btn().title, 'Show all hotels');
+        assert.equal(btn().getAttribute('aria-label'), 'Show all hotels');
     });
 
     test('guarded operations tolerate unavailable DOM', ({ core, document }) => {
