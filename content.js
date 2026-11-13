@@ -183,7 +183,7 @@
                     getPropertyCards().forEach(function (card) {
                         if (card && typeof card.classList !== 'undefined' && !card.classList.contains('bf-dimmed')) visibleCount++;
                     });
-                    var text = (count === 0 ? 'No hotels saved' : count + ' hotels saved');
+                    var text = (count === 0 ? 'No hotels saved' : count === 1 ? '1 hotel saved' : count + ' hotels saved');
                     if (dimmed) text += ' (' + dimmedCount + ' dimmed)';
                     if (count > 0) text += ' (' + visibleCount + ' visible)';
                     var nonExcluded = getNonExcludedVisibleHotels(getVisibleHotelNames());

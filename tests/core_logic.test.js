@@ -103,7 +103,7 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(alpha.classList.contains('bf-dimmed'), true);
         assert.equal(beta.classList.contains('bf-dimmed'), false);
         assert.deepEqual(plain(core.getDimmedHotelNames()), ['alpha']);
-        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotels saved.*1 dimmed.*1 visible/);
+        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotel saved.*1 dimmed.*1 visible/);
         for (const invalid of [null, 42, '', '   ', 'missing']) core.removeHotel(invalid);
         assert.deepEqual(plain(core.getSavedList()), ['alpha']);
         core.removeHotel('  ALPHA  ');
@@ -119,7 +119,7 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.deepEqual(plain(core.getSavedList()), ['beta']);
         assert.equal(alpha.classList.contains('bf-dimmed'), false);
         assert.equal(beta.classList.contains('bf-dimmed'), true);
-        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotels saved \(1 dimmed\) \(1 visible\)/);
+        assert.match(document.getElementById('hotel-list-status').textContent, /1 hotel saved \(1 dimmed\) \(1 visible\)/);
     });
 
     test('dimming is idempotent and toggle round-trips', ({ core, card, localStorage }) => {
@@ -444,7 +444,7 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         card('alpha');
         core.applyDimming();
         core.updateStatus();
-        assert.match(status.textContent, /1 hotels saved \(1 dimmed\)/);
+        assert.match(status.textContent, /1 hotel saved \(1 dimmed\)/);
         assert.doesNotMatch(status.textContent, /\+\d+ new/);
         card('Beta');
         core.updateStatus();
@@ -465,6 +465,15 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         core.clearSavedList();
         assert.equal(status.style.color, '');
         assert.equal(status.style.borderColor, '');
+    });
+
+    test('status text omits the dimmed segment when saved hotels are not dimmed', ({ core, localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha"]');
+        card('alpha');
+        core.updateStatus();
+        const status = document.getElementById('hotel-list-status');
+        assert.match(status.textContent, /1 hotel saved \(1 visible\)/);
+        assert.doesNotMatch(status.textContent, /dimmed/);
     });
 
     test('copy all saved writes the exact newline-joined payload and reports the entry count', () => {
