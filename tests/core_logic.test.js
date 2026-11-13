@@ -467,6 +467,15 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(status.style.borderColor, '');
     });
 
+    test('status text omits the dimmed segment when saved hotels are not dimmed', ({ core, localStorage, card, document }) => {
+        localStorage.setItem(key, '["alpha"]');
+        card('alpha');
+        core.updateStatus();
+        const status = document.getElementById('hotel-list-status');
+        assert.match(status.textContent, /1 hotels saved \(1 visible\)/);
+        assert.doesNotMatch(status.textContent, /dimmed/);
+    });
+
     test('copy all saved writes the exact newline-joined payload and reports the entry count', () => {
         const b = loadBrowser(sourceFiles[filename], src => src, `
             window.__copyCalls = [];
