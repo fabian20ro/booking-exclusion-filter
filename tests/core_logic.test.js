@@ -648,3 +648,21 @@ legacy.card('Alpha'); legacy.card(' ALPHA ');
 assert.deepEqual(plain(legacy.core.getVisibleHotelNames()), ['alpha']);
 assert.equal(legacy.core.mergeSavedWithVisible().savedCount, 1);
 console.log('PASS bookmarklet.js: no ES2015 collection runtime dependency');
+
+test('content.js: Escape in the saved-list filter input clears the filter and keeps the list open', () => {
+    const b = loadBrowser(sourceFiles['content.js'], src => src, '');
+    b.localStorage.setItem(key, JSON.stringify(['alpha hotel', 'beta inn']));
+    b.document.getElementById('hotel-list-status').click();
+    const list = b.document.getElementById('hover-hotel-list');
+    const input = list.querySelector('input');
+    input.value = 'Hotel';
+    input.dispatch('input');
+    assert.ok(list.textContent.includes('alpha hotel'));
+    assert.doesNotMatch(list.textContent, /beta inn/);
+    input.dispatch('keydown', { key: 'Escape', keyCode: 27 });
+    assert.equal(input.value, '');
+    assert.equal(list.style.display, 'block');
+    assert.equal(b.document.getElementById('hotel-list-status').attributes['aria-expanded'], 'true');
+    assert.ok(list.textContent.includes('alpha hotel'));
+    assert.ok(list.textContent.includes('beta inn'));
+});

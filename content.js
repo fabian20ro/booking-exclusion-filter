@@ -322,6 +322,12 @@
         filterInput.addEventListener('input', function() {
             renderSavedList(hoverList, filterInput.value);
         });
+        filterInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' || event.keyCode === 27) {
+                filterInput.value = '';
+                renderSavedList(hoverList, '');
+            }
+        });
         hoverList.appendChild(filterInput);
 
         function setHoverListVisible(visible) {
@@ -490,7 +496,7 @@
         });
 
         panel.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
+            if (event.key === 'Escape' && event.target !== filterInput) {
                 setHoverListVisible(false);
             }
         }, true);
