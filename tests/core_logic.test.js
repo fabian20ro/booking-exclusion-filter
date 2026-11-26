@@ -347,6 +347,25 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.ok(list.textContent.includes('beta inn'));
     });
 
+    test('saved-list filter input shows a count header when it narrows results', ({ core, document }) => {
+        core.mergeSavedWithVisible(['Alpha Hotel', 'Beta Inn', 'Gamma Lodge']);
+        const list = document.getElementById('hover-hotel-list');
+        const input = list.querySelector('input');
+        input.value = 'alpha';
+        input.dispatch('input');
+        const ul = list.querySelector('ul');
+        assert.equal(ul.children[0].textContent, '1 of 3 match');
+        assert.match(ul.textContent, /alpha hotel/);
+        assert.doesNotMatch(ul.textContent, /beta inn/);
+        input.value = 'a';
+        input.dispatch('input');
+        assert.equal(list.querySelector('ul').children.length, 3);
+        assert.match(list.querySelector('ul').children[0].textContent, /^alpha hotel/);
+        input.value = '';
+        input.dispatch('input');
+        assert.equal(list.querySelector('ul').children.length, 3);
+    });
+
     test('saved-list remove button confirms, removes, un-dims and re-renders', () => {
         const b = loadBrowser(sourceFiles[filename], src => src, `
             window.__confirms = [];

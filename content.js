@@ -525,6 +525,11 @@
                 ul.appendChild(noMatch);
                 return;
             }
+            if (filter.trim() && items.length < saved.length) {
+                var count = document.createElement('li');
+                count.textContent = items.length + ' of ' + saved.length + ' match';
+                ul.appendChild(count);
+            }
             items.forEach(function (name) {
                 var li = document.createElement('li');
                 li.style.display = 'flex';
