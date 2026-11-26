@@ -132,6 +132,18 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(core.toggleDimSavedHotels(), true);
     });
 
+    test('toggle only affects saved hotels, leaving unsaved dimmed cards untouched', ({ core, card, localStorage }) => {
+        localStorage.setItem(key, '["alpha"]');
+        const alpha = card('alpha');
+        const beta = card('beta', true);
+        core.toggleDimSavedHotels();
+        assert.equal(alpha.classList.contains('bf-dimmed'), true);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+        core.toggleDimSavedHotels();
+        assert.equal(alpha.classList.contains('bf-dimmed'), false);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+    });
+
     test('dimmed names deduplicate repeated cards via normalized titles', ({ core, card }) => {
         card(' ALPHA ', true); card('alpha', true); card('  ALPHA  ', true);
         assert.deepEqual(plain(core.getDimmedHotelNames()), ['alpha']);
@@ -333,6 +345,25 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         input.dispatch('input');
         assert.ok(list.textContent.includes('alpha hotel'));
         assert.ok(list.textContent.includes('beta inn'));
+    });
+
+    test('saved-list filter input shows a count header when it narrows results', ({ core, document }) => {
+        core.mergeSavedWithVisible(['Alpha Hotel', 'Beta Inn', 'Gamma Lodge']);
+        const list = document.getElementById('hover-hotel-list');
+        const input = list.querySelector('input');
+        input.value = 'alpha';
+        input.dispatch('input');
+        const ul = list.querySelector('ul');
+        assert.equal(ul.children[0].textContent, '1 of 3 match');
+        assert.match(ul.textContent, /alpha hotel/);
+        assert.doesNotMatch(ul.textContent, /beta inn/);
+        input.value = 'a';
+        input.dispatch('input');
+        assert.equal(list.querySelector('ul').children.length, 3);
+        assert.match(list.querySelector('ul').children[0].textContent, /^alpha hotel/);
+        input.value = '';
+        input.dispatch('input');
+        assert.equal(list.querySelector('ul').children.length, 3);
     });
 
     test('saved-list remove button confirms, removes, un-dims and re-renders', () => {
