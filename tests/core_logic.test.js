@@ -132,6 +132,18 @@ for (const filename of ['content.js', 'bookmarklet.js']) {
         assert.equal(core.toggleDimSavedHotels(), true);
     });
 
+    test('toggle only affects saved hotels, leaving unsaved dimmed cards untouched', ({ core, card, localStorage }) => {
+        localStorage.setItem(key, '["alpha"]');
+        const alpha = card('alpha');
+        const beta = card('beta', true);
+        core.toggleDimSavedHotels();
+        assert.equal(alpha.classList.contains('bf-dimmed'), true);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+        core.toggleDimSavedHotels();
+        assert.equal(alpha.classList.contains('bf-dimmed'), false);
+        assert.equal(beta.classList.contains('bf-dimmed'), true);
+    });
+
     test('dimmed names deduplicate repeated cards via normalized titles', ({ core, card }) => {
         card(' ALPHA ', true); card('alpha', true); card('  ALPHA  ', true);
         assert.deepEqual(plain(core.getDimmedHotelNames()), ['alpha']);
